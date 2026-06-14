@@ -1,6 +1,7 @@
 import type { Comparator } from "./compare.ts";
 import { compareKeys } from "./compare.ts";
 import { compareOutputEntry } from "./outputs.ts";
+import { compareParameterEntry } from "./parameters.ts";
 import { compareResourceAttributes, compareResourcesByType } from "./resources.ts";
 import { compareTopLevelSections } from "./sections.ts";
 
@@ -16,6 +17,8 @@ import { compareTopLevelSections } from "./sections.ts";
  *   fixed resource attribute order.
  * - A direct child of the root `Outputs` section (`["Outputs", <name>]`): the
  *   fixed output entry order.
+ * - A direct child of the root `Parameters` section (`["Parameters", <name>]`):
+ *   the fixed parameter entry order.
  * - Everywhere else: plain alphabetical order.
  *
  * The position is matched strictly by path, so a `Type` or `Properties` key that
@@ -39,6 +42,10 @@ export function resolveTemplateComparator(
 
   if (path.length === 2 && path[0] === "Outputs") {
     return compareOutputEntry;
+  }
+
+  if (path.length === 2 && path[0] === "Parameters") {
+    return compareParameterEntry;
   }
 
   return compareKeys;

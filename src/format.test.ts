@@ -133,9 +133,10 @@ describe("formatFile", () => {
     const bucket = (result.Resources as { Bucket: Record<string, unknown> }).Bucket;
     // Resource definition: Type first, then remaining attributes alphabetically.
     expect(Object.keys(bucket)).toEqual(["Type", "DeletionPolicy"]);
+    // Parameter definition: Type first, then the conventional order.
     expect(Object.keys((result.Parameters as { EnvName: object }).EnvName)).toEqual([
-      "Default",
       "Type",
+      "Default",
     ]);
   });
 
@@ -259,6 +260,51 @@ describe("formatFile", () => {
       "Export",
       "Value",
     ]);
+  });
+
+  it("orders parameter entries (Type first, then convention) without hoisting a resource's Type", async () => {
+    const filePath = await write(
+      "parameters.json",
+      JSON.stringify({
+        Parameters: {
+          EnvName: {
+            NoEcho: false,
+            Custom: "x",
+            AllowedValues: ["prod", "dev"],
+            Default: "dev",
+            Description: "Target environment",
+            Type: "String",
+          },
+        },
+        Resources: {
+          // An SSM Parameter resource: its Properties.Type must stay
+          // alphabetical, never reordered by the parameter rule.
+          Setting: { Type: "AWS::SSM::Parameter", Properties: { Value: "v", Type: "String" } },
+        },
+      }),
+    );
+
+    await formatFile(filePath);
+    const result = JSON.parse(await readFile(filePath, "utf8")) as {
+      Parameters: { EnvName: Record<string, unknown> };
+      Resources: { Setting: { Properties: Record<string, unknown> } };
+    };
+
+    // Parameter entry: Type first, conventional order, unknown key last.
+    expect(Object.keys(result.Parameters.EnvName)).toEqual([
+      "Type",
+      "Description",
+      "Default",
+      "AllowedValues",
+      "NoEcho",
+      "Custom",
+    ]);
+
+    // AllowedValues array order is preserved.
+    expect(result.Parameters.EnvName.AllowedValues).toEqual(["prod", "dev"]);
+
+    // A resource's Properties.Type is not affected by the parameter rule.
+    expect(Object.keys(result.Resources.Setting.Properties)).toEqual(["Type", "Value"]);
   });
 
   it("rejects when the file does not contain valid JSON", async () => {
