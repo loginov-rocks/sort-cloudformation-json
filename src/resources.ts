@@ -3,15 +3,26 @@ import { compareKeys, createOrderedComparator } from "./compare.ts";
 
 /**
  * The order of attributes within a single resource definition (a direct child
- * of the root `Resources` section): `Type` first, then `Properties`, then every
- * remaining attribute (`DependsOn`, `Condition`, `DeletionPolicy`, `Metadata`,
- * etc.) alphabetically.
+ * of the root `Resources` section). Listed attributes come first in this order;
+ * any other key is placed after them alphabetically.
  *
- * This is the single place to read or amend the resource attribute order.
+ * Only `Type` and `Properties` reflect a firm convention. The remaining resource
+ * attributes (`Condition`, `DependsOn`, the policies, `Metadata`) have no
+ * AWS-blessed order — this constant is the single place to adjust them.
  *
  * @see https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
  */
-export const RESOURCE_ATTRIBUTE_ORDER: readonly string[] = ["Type", "Properties"];
+export const RESOURCE_ATTRIBUTE_ORDER: readonly string[] = [
+  "Type",
+  "Condition",
+  "DependsOn",
+  "Properties",
+  "CreationPolicy",
+  "UpdatePolicy",
+  "UpdateReplacePolicy",
+  "DeletionPolicy",
+  "Metadata",
+];
 
 /**
  * Comparator for the keys of a resource definition object. Recognized

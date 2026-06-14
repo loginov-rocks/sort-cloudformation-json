@@ -7,36 +7,64 @@ import {
 } from "./resources.ts";
 
 describe("compareResourceAttributes", () => {
-  it("orders Type before Properties", () => {
+  it("orders the conventional attributes by their defined position", () => {
     expect(compareResourceAttributes("Type", "Properties")).toBeLessThan(0);
-    expect(compareResourceAttributes("Properties", "Type")).toBeGreaterThan(0);
+    expect(compareResourceAttributes("Condition", "DependsOn")).toBeLessThan(0);
+    expect(compareResourceAttributes("DependsOn", "Properties")).toBeLessThan(0);
+    expect(compareResourceAttributes("DeletionPolicy", "Metadata")).toBeLessThan(0);
+    expect(compareResourceAttributes("Metadata", "Type")).toBeGreaterThan(0);
   });
 
-  it("places recognized attributes before any other key", () => {
-    expect(compareResourceAttributes("Properties", "DependsOn")).toBeLessThan(0);
-    expect(compareResourceAttributes("Condition", "Type")).toBeGreaterThan(0);
+  it("places recognized attributes before any unlisted key", () => {
+    expect(compareResourceAttributes("Metadata", "CustomKey")).toBeLessThan(0);
+    expect(compareResourceAttributes("Anything", "Type")).toBeGreaterThan(0);
   });
 
-  it("sorts remaining attributes alphabetically among themselves", () => {
-    expect(compareResourceAttributes("Condition", "DeletionPolicy")).toBeLessThan(0);
-    expect(compareResourceAttributes("Metadata", "DependsOn")).toBeGreaterThan(0);
+  it("sorts unlisted attributes alphabetically among themselves", () => {
+    expect(compareResourceAttributes("Apple", "Banana")).toBeLessThan(0);
+    expect(compareResourceAttributes("Zebra", "Apple")).toBeGreaterThan(0);
   });
 
   it("sorts a shuffled resource attribute set into the expected order", () => {
-    const keys = ["DeletionPolicy", "Properties", "Metadata", "Type", "Condition", "DependsOn"];
+    const keys = [
+      "Metadata",
+      "Properties",
+      "Custom",
+      "DeletionPolicy",
+      "Type",
+      "UpdatePolicy",
+      "Condition",
+      "UpdateReplacePolicy",
+      "DependsOn",
+      "CreationPolicy",
+    ];
 
     expect([...keys].sort(compareResourceAttributes)).toEqual([
       "Type",
-      "Properties",
       "Condition",
-      "DeletionPolicy",
       "DependsOn",
+      "Properties",
+      "CreationPolicy",
+      "UpdatePolicy",
+      "UpdateReplacePolicy",
+      "DeletionPolicy",
       "Metadata",
+      "Custom", // unlisted -> after recognized, alphabetical
     ]);
   });
 
-  it("exposes the attribute order in one place", () => {
-    expect(RESOURCE_ATTRIBUTE_ORDER).toEqual(["Type", "Properties"]);
+  it("exposes the full attribute order in one place", () => {
+    expect(RESOURCE_ATTRIBUTE_ORDER).toEqual([
+      "Type",
+      "Condition",
+      "DependsOn",
+      "Properties",
+      "CreationPolicy",
+      "UpdatePolicy",
+      "UpdateReplacePolicy",
+      "DeletionPolicy",
+      "Metadata",
+    ]);
   });
 });
 

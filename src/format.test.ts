@@ -140,7 +140,7 @@ describe("formatFile", () => {
     ]);
   });
 
-  it("orders resource attributes (Type, Properties, then the rest) without hoisting nested Type keys", async () => {
+  it("orders resource attributes by the conventional order without hoisting nested Type keys", async () => {
     const filePath = await write(
       "resources.json",
       JSON.stringify({
@@ -169,13 +169,13 @@ describe("formatFile", () => {
       }
     ).Resources.RecordSet;
 
-    // Resource attributes: Type, Properties, then the rest alphabetically.
+    // Resource attributes follow the conventional order.
     expect(Object.keys(resource)).toEqual([
       "Type",
-      "Properties",
       "Condition",
-      "DeletionPolicy",
       "DependsOn",
+      "Properties",
+      "DeletionPolicy",
     ]);
 
     // The nested "Type" inside Properties is sorted alphabetically, not hoisted.
