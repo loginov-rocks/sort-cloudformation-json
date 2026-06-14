@@ -1,0 +1,6 @@
+# Root Directories
+/dist/
+/node_modules/
+
+# Recursive Files
+.DS_Store

@@ -1,0 +1,44 @@
+{
+  "name": "sort-cloudformation-json",
+  "version": "0.1.0",
+  "description": "Zero-config CLI that recursively sorts the keys of a CloudFormation JSON template in place",
+  "keywords": [
+    "cloudformation",
+    "json",
+    "sort",
+    "format",
+    "cli"
+  ],
+  "homepage": "https://github.com/loginov-rocks/sort-cloudformation-json#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loginov-rocks/sort-cloudformation-json.git"
+  },
+  "bugs": {
+    "url": "https://github.com/loginov-rocks/sort-cloudformation-json/issues"
+  },
+  "author": "Danila Loginov <danila@loginov.rocks> (https://loginov.rocks)",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "sort-cloudformation-json": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint .",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.2",
+    "eslint": "^10.5.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.0"
+  }
+}
