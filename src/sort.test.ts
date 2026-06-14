@@ -111,57 +111,104 @@ describe('sortValue', () => {
     expect(seen).toEqual([[], ['list'], ['list']]);
   });
 
-  it('reorders a recognized Tags array by Key while leaving other arrays in place', () => {
+  it('reorders Resources.<id>.Properties.Tags by Key, but not a deeper Tags', () => {
     /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
     const value = {
-      Tags: [
-        { Value: 'team-a', Key: 'owner' },
-        { Value: 'prod', Key: 'env' },
-      ],
-      NotTags: [{ Key: 'z' }, { Key: 'a' }],
+      Resources: {
+        Instance: {
+          Type: 'AWS::EC2::Instance',
+          Properties: {
+            Tags: [
+              { Value: 'team-a', Key: 'owner' },
+              { Value: 'prod', Key: 'env' },
+            ],
+            // Tags nested deeper inside Properties must keep their order.
+            TagSpecifications: [{ Tags: [{ Key: 'z' }, { Key: 'a' }] }],
+          },
+        },
+      },
     };
     /* eslint-enable perfectionist/sort-objects */
 
     const sorted = sortValue(value) as {
-      NotTags: Record<string, string>[];
-      Tags: Record<string, string>[];
+      Resources: {
+        Instance: {
+          Properties: {
+            Tags: { Key: string; Value: string }[];
+            TagSpecifications: { Tags: { Key: string }[] }[];
+          };
+        };
+      };
     };
+    const { Properties } = sorted.Resources.Instance;
 
-    // Tags reordered by Key, and each tag's own keys sorted alphabetically.
-    expect(sorted.Tags).toEqual([
+    // Properties.Tags reordered by Key, each tag's own keys sorted alphabetically.
+    expect(Properties.Tags).toEqual([
       { Key: 'env', Value: 'prod' },
       { Key: 'owner', Value: 'team-a' },
     ]);
-    // A same-shaped array under a different key keeps its original order.
-    expect(sorted.NotTags.map(item => item.Key)).toEqual(['z', 'a']);
+    // The deeper TagSpecifications[].Tags keeps its original element order.
+    expect(Properties.TagSpecifications[0].Tags.map(tag => tag.Key)).toEqual(['z', 'a']);
   });
 
   it('leaves a Tags array untouched when an element is not tag-shaped', () => {
-    const value = { Tags: [{ Key: 'b' }, { NotAKey: 'x' }] };
+    /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
+    const value = {
+      Resources: { R: { Type: 'X', Properties: { Tags: [{ Key: 'b' }, { NotAKey: 'x' }] } } },
+    };
+    /* eslint-enable perfectionist/sort-objects */
 
-    const sorted = sortValue(value) as { Tags: Record<string, unknown>[] };
+    const sorted = sortValue(value) as {
+      Resources: { R: { Properties: { Tags: Record<string, unknown>[] } } };
+    };
 
-    expect(sorted.Tags).toEqual([{ Key: 'b' }, { NotAKey: 'x' }]);
+    expect(sorted.Resources.R.Properties.Tags).toEqual([{ Key: 'b' }, { NotAKey: 'x' }]);
   });
 
-  it('sorts a DependsOn array of strings alphabetically', () => {
-    const sorted = sortValue({ DependsOn: ['Web', 'App', 'Db'] }) as { DependsOn: string[] };
+  it('does not reorder a Tags array that is not under a resource Properties', () => {
+    const value = { Tags: [{ Key: 'z' }, { Key: 'a' }] };
 
-    expect(sorted.DependsOn).toEqual(['App', 'Db', 'Web']);
+    const sorted = sortValue(value) as { Tags: { Key: string }[] };
+
+    expect(sorted.Tags.map(tag => tag.Key)).toEqual(['z', 'a']);
   });
 
-  it('leaves a DependsOn array untouched when an element is not a string', () => {
-    const value = { DependsOn: ['Web', { Ref: 'App' }] };
+  it('sorts a resource DependsOn array of strings alphabetically', () => {
+    const value = { Resources: { R: { DependsOn: ['Web', 'App', 'Db'], Type: 'X' } } };
 
-    const sorted = sortValue(value) as { DependsOn: unknown[] };
+    const sorted = sortValue(value) as {
+      Resources: { R: { DependsOn: string[] } };
+    };
 
-    expect(sorted.DependsOn).toEqual(['Web', { Ref: 'App' }]);
+    expect(sorted.Resources.R.DependsOn).toEqual(['App', 'Db', 'Web']);
   });
 
-  it('leaves a single-string DependsOn value untouched', () => {
-    const sorted = sortValue({ DependsOn: 'App' }) as { DependsOn: string };
+  it('leaves a resource DependsOn array untouched when an element is not a string', () => {
+    const value = { Resources: { R: { DependsOn: ['Web', { Ref: 'App' }], Type: 'X' } } };
 
-    expect(sorted.DependsOn).toBe('App');
+    const sorted = sortValue(value) as {
+      Resources: { R: { DependsOn: unknown[] } };
+    };
+
+    expect(sorted.Resources.R.DependsOn).toEqual(['Web', { Ref: 'App' }]);
+  });
+
+  it('leaves a single-string resource DependsOn value untouched', () => {
+    const value = { Resources: { R: { DependsOn: 'App', Type: 'X' } } };
+
+    const sorted = sortValue(value) as {
+      Resources: { R: { DependsOn: string } };
+    };
+
+    expect(sorted.Resources.R.DependsOn).toBe('App');
+  });
+
+  it('does not reorder a DependsOn array that is not a direct child of a resource', () => {
+    const value = { DependsOn: ['Web', 'App', 'Db'] };
+
+    const sorted = sortValue(value) as { DependsOn: string[] };
+
+    expect(sorted.DependsOn).toEqual(['Web', 'App', 'Db']);
   });
 
   it('does not mutate the input value', () => {

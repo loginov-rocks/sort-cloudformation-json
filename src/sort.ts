@@ -12,8 +12,9 @@ import { isTagList, sortTagsByKey } from './tags.ts';
  * - Arrays: element order is preserved (it is meaningful in CloudFormation) but
  *   each element is still recursed into so objects nested in arrays get sorted.
  *   Array indices are not part of the path — an array is transparent to it.
- *   The only exceptions are a recognized `Tags` array (reordered by `Key`) and a
- *   recognized `DependsOn` array of strings (sorted alphabetically).
+ *   The only exceptions are position-scoped: a resource's `Properties.Tags`
+ *   array (reordered by `Key`) and a resource's `DependsOn` array of strings
+ *   (sorted alphabetically).
  * - Everything else (strings, numbers, booleans, null) is returned unchanged.
  *
  * `path` is the sequence of object keys traversed from the root to the current
@@ -27,14 +28,13 @@ export function sortValue(
   path: readonly string[] = [],
 ): unknown {
   if (Array.isArray(value)) {
-    // Arrays keep their order, with two explicit, key-name-based exceptions:
-    // a recognized `Tags` list is sorted by Key, and a recognized `DependsOn`
-    // list of strings is sorted alphabetically.
-    const key = path.at(-1);
+    // Arrays keep their order, with two explicit, position-scoped exceptions:
+    // a resource's `Properties.Tags` list is sorted by Key, and a resource's
+    // `DependsOn` list of strings is sorted alphabetically.
     let elements: readonly unknown[] = value;
-    if (isTagList(key, value)) {
+    if (isTagList(path, value)) {
       elements = sortTagsByKey(value);
-    } else if (isDependsOnList(key, value)) {
+    } else if (isDependsOnList(path, value)) {
       elements = sortDependsOn(value);
     }
     return elements.map(item => sortValue(item, resolveComparator, path));

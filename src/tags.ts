@@ -1,16 +1,20 @@
 import { compareKeys } from './compare.ts';
 
-/** The key whose array value is the sole exception to preserving array order. */
-const TAGS_KEY = 'Tags';
-
 /**
- * True when an array is safely recognizable as a CloudFormation tag list: it is
- * the value of a key named exactly `Tags` and every element is an object with a
- * string `Key`. Tag lists appear under many resource properties, so this is
- * matched by key name and element shape rather than by a fixed path.
+ * True when an array is safely recognizable as a CloudFormation tag list to
+ * reorder by `Key`. Both conditions must hold:
+ *
+ * - Position: the array is the value of `Tags` sitting directly under a
+ *   resource's `Properties`, i.e. the path is exactly
+ *   `["Resources", <logicalID>, "Properties", "Tags"]`. A `Tags` key anywhere
+ *   else — deeper inside `Properties` (e.g. `TagSpecifications[].Tags`), or under
+ *   `Metadata`, `Parameters`, `Outputs`, or the top level — is deliberately left
+ *   to the normal array handling and never reordered.
+ * - Shape: every element is an object with a string `Key`. If any element does
+ *   not fit, the whole array is left untouched.
  */
-export function isTagList(key: string | undefined, value: readonly unknown[]): boolean {
-  return key === TAGS_KEY && value.every(isTag);
+export function isTagList(path: readonly string[], value: readonly unknown[]): boolean {
+  return isPropertiesTagsPath(path) && value.every(isTag);
 }
 
 /**
@@ -23,6 +27,21 @@ export function isTagList(key: string | undefined, value: readonly unknown[]): b
  */
 export function sortTagsByKey(tags: readonly unknown[]): unknown[] {
   return tags.toSorted((a, b) => compareKeys((a as { Key: string }).Key, (b as { Key: string }).Key));
+}
+
+/**
+ * True when `path` points exactly at a resource's `Properties.Tags`, i.e.
+ * `["Resources", <logicalID>, "Properties", "Tags"]`. The logical ID is any
+ * single key; array indices never appear in the path, so a deeper
+ * `TagSpecifications[].Tags` lengthens the path and is correctly rejected.
+ */
+function isPropertiesTagsPath(path: readonly string[]): boolean {
+  return (
+    path.length === 4
+    && path[0] === 'Resources'
+    && path[2] === 'Properties'
+    && path[3] === 'Tags'
+  );
 }
 
 /** A tag is an object with a string `Key`. */

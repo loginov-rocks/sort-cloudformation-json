@@ -3,24 +3,37 @@ import { describe, expect, it } from '@jest/globals';
 import { isTagList, sortTagsByKey } from './tags.ts';
 
 describe('isTagList', () => {
-  it('is true for the Tags key when every element is an object with a string Key', () => {
-    expect(isTagList('Tags', [{ Key: 'env', Value: 'prod' }, { Key: 'team' }])).toBe(true);
+  const propertiesTags = ['Resources', 'MyBucket', 'Properties', 'Tags'];
+
+  it('is true for Properties.Tags when every element is an object with a string Key', () => {
+    expect(isTagList(propertiesTags, [{ Key: 'env', Value: 'prod' }, { Key: 'team' }])).toBe(true);
   });
 
-  it('is true for an empty Tags array', () => {
-    expect(isTagList('Tags', [])).toBe(true);
+  it('is true for an empty Properties.Tags array', () => {
+    expect(isTagList(propertiesTags, [])).toBe(true);
   });
 
-  it('is false when the key is not exactly \'Tags\'', () => {
-    expect(isTagList('NotTags', [{ Key: 'env' }])).toBe(false);
-    expect(isTagList(undefined, [{ Key: 'env' }])).toBe(false);
+  it('is false when the Tags array is not directly under a resource Properties', () => {
+    // Deeper inside Properties, e.g. TagSpecifications[].Tags (array indices are
+    // not part of the path, so the inner Tags path is one segment longer).
+    expect(
+      isTagList(['Resources', 'Inst', 'Properties', 'TagSpecifications', 'Tags'], [{ Key: 'env' }]),
+    ).toBe(false);
+    // Under Metadata, Outputs, or the top level.
+    expect(isTagList(['Resources', 'Inst', 'Metadata', 'Tags'], [{ Key: 'env' }])).toBe(false);
+    expect(isTagList(['Outputs', 'Out', 'Tags'], [{ Key: 'env' }])).toBe(false);
+    expect(isTagList(['Tags'], [{ Key: 'env' }])).toBe(false);
+  });
+
+  it('is false when the final key is not exactly \'Tags\'', () => {
+    expect(isTagList(['Resources', 'X', 'Properties', 'NotTags'], [{ Key: 'env' }])).toBe(false);
   });
 
   it('is false when any element is not tag-shaped', () => {
-    expect(isTagList('Tags', [{ Key: 'env' }, 'oops'])).toBe(false); // not an object
-    expect(isTagList('Tags', [{ Key: 'env' }, null])).toBe(false); // null
-    expect(isTagList('Tags', [{ Value: 'x' }])).toBe(false); // missing Key
-    expect(isTagList('Tags', [{ Key: 42 }])).toBe(false); // non-string Key
+    expect(isTagList(propertiesTags, [{ Key: 'env' }, 'oops'])).toBe(false); // not an object
+    expect(isTagList(propertiesTags, [{ Key: 'env' }, null])).toBe(false); // null
+    expect(isTagList(propertiesTags, [{ Value: 'x' }])).toBe(false); // missing Key
+    expect(isTagList(propertiesTags, [{ Key: 42 }])).toBe(false); // non-string Key
   });
 });
 
