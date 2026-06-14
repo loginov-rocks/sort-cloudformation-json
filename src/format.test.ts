@@ -351,6 +351,31 @@ describe("formatFile", () => {
     expect(Object.keys(properties.NotReallyTags as object)).toEqual(["a", "z"]);
   });
 
+  it("sorts a resource's DependsOn array of strings alphabetically", async () => {
+    const filePath = await write(
+      "depends-on.json",
+      JSON.stringify({
+        Resources: {
+          App: {
+            Type: "AWS::ECS::Service",
+            DependsOn: ["Web", "Db", "Cache"],
+          },
+        },
+      }),
+    );
+
+    await formatFile(filePath);
+    const app = (
+      JSON.parse(await readFile(filePath, "utf8")) as {
+        Resources: { App: Record<string, unknown> };
+      }
+    ).Resources.App;
+
+    expect(app.DependsOn).toEqual(["Cache", "Db", "Web"]);
+    // Rule 2 still applies: Type, then the remaining attributes.
+    expect(Object.keys(app)).toEqual(["Type", "DependsOn"]);
+  });
+
   it("rejects when the file does not contain valid JSON", async () => {
     const filePath = await write("broken.json", "{ not json");
 

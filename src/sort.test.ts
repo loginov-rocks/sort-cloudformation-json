@@ -128,6 +128,26 @@ describe("sortValue", () => {
     expect(sorted.Tags).toEqual([{ Key: "b" }, { NotAKey: "x" }]);
   });
 
+  it("sorts a DependsOn array of strings alphabetically", () => {
+    const sorted = sortValue({ DependsOn: ["Web", "App", "Db"] }) as { DependsOn: string[] };
+
+    expect(sorted.DependsOn).toEqual(["App", "Db", "Web"]);
+  });
+
+  it("leaves a DependsOn array untouched when an element is not a string", () => {
+    const value = { DependsOn: ["Web", { Ref: "App" }] };
+
+    const sorted = sortValue(value) as { DependsOn: unknown[] };
+
+    expect(sorted.DependsOn).toEqual(["Web", { Ref: "App" }]);
+  });
+
+  it("leaves a single-string DependsOn value untouched", () => {
+    const sorted = sortValue({ DependsOn: "App" }) as { DependsOn: string };
+
+    expect(sorted.DependsOn).toBe("App");
+  });
+
   it("does not mutate the input value", () => {
     const template = { B: 1, A: 2 };
 
