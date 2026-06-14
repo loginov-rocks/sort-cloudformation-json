@@ -1,9 +1,10 @@
-import type { Comparator } from "./compare.ts";
-import { compareKeys } from "./compare.ts";
-import { compareOutputEntry } from "./outputs.ts";
-import { compareParameterEntry } from "./parameters.ts";
-import { compareResourceAttributes, compareResourcesByType } from "./resources.ts";
-import { compareTopLevelSections } from "./sections.ts";
+import type { Comparator } from './compare.ts';
+
+import { compareKeys } from './compare.ts';
+import { compareOutputEntry } from './outputs.ts';
+import { compareParameterEntry } from './parameters.ts';
+import { compareResourceAttributes, compareResourcesByType } from './resources.ts';
+import { compareTopLevelSections } from './sections.ts';
 
 /**
  * Chooses the comparator for an object's keys based on its structural position
@@ -32,19 +33,19 @@ export function resolveTemplateComparator(
     return compareTopLevelSections;
   }
 
-  if (path.length === 1 && path[0] === "Resources") {
+  if (path.length === 1 && path[0] === 'Resources') {
     return compareResourcesByType(object);
   }
 
-  if (path.length === 2 && path[0] === "Resources") {
+  if (path.length === 2 && path[0] === 'Resources') {
     return compareResourceAttributes;
   }
 
-  if (path.length === 2 && path[0] === "Outputs") {
+  if (path.length === 2 && path[0] === 'Outputs') {
     return compareOutputEntry;
   }
 
-  if (path.length === 2 && path[0] === "Parameters") {
+  if (path.length === 2 && path[0] === 'Parameters') {
     return compareParameterEntry;
   }
 

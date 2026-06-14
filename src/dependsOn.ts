@@ -1,7 +1,7 @@
-import { compareKeys } from "./compare.ts";
+import { compareKeys } from './compare.ts';
 
 /** A second key (alongside `Tags`) whose array value may be reordered. */
-const DEPENDS_ON_KEY = "DependsOn";
+const DEPENDS_ON_KEY = 'DependsOn';
 
 /**
  * True when an array is safely recognizable as a `DependsOn` list: it is the
@@ -12,7 +12,7 @@ const DEPENDS_ON_KEY = "DependsOn";
  * single-string `DependsOn` (also valid) is not an array and never reaches here.
  */
 export function isDependsOnList(key: string | undefined, value: readonly unknown[]): boolean {
-  return key === DEPENDS_ON_KEY && value.every((element) => typeof element === "string");
+  return key === DEPENDS_ON_KEY && value.every(element => typeof element === 'string');
 }
 
 /**
@@ -23,5 +23,5 @@ export function isDependsOnList(key: string | undefined, value: readonly unknown
  * Callers must first confirm the array with {@link isDependsOnList}.
  */
 export function sortDependsOn(dependsOn: readonly unknown[]): unknown[] {
-  return [...dependsOn].sort((a, b) => compareKeys(a as string, b as string));
+  return dependsOn.toSorted((a, b) => compareKeys(a as string, b as string));
 }

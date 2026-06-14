@@ -1,5 +1,6 @@
-import type { Comparator } from "./compare.ts";
-import { compareKeys, createOrderedComparator } from "./compare.ts";
+import type { Comparator } from './compare.ts';
+
+import { compareKeys, createOrderedComparator } from './compare.ts';
 
 /**
  * The order of attributes within a single resource definition (a direct child
@@ -13,15 +14,15 @@ import { compareKeys, createOrderedComparator } from "./compare.ts";
  * @see https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
  */
 export const RESOURCE_ATTRIBUTE_ORDER: readonly string[] = [
-  "Type",
-  "Condition",
-  "DependsOn",
-  "Properties",
-  "CreationPolicy",
-  "UpdatePolicy",
-  "UpdateReplacePolicy",
-  "DeletionPolicy",
-  "Metadata",
+  'Type',
+  'Condition',
+  'DependsOn',
+  'Properties',
+  'CreationPolicy',
+  'UpdatePolicy',
+  'UpdateReplacePolicy',
+  'DeletionPolicy',
+  'Metadata',
 ];
 
 /**
@@ -43,16 +44,16 @@ export const compareResourceAttributes = createOrderedComparator(RESOURCE_ATTRIB
 export function compareResourcesByType(resources: Readonly<Record<string, unknown>>): Comparator {
   return (a, b) => {
     const byType = compareKeys(resourceType(resources[a]), resourceType(resources[b]));
-    return byType !== 0 ? byType : compareKeys(a, b);
+    return byType === 0 ? compareKeys(a, b) : byType;
   };
 }
 
 function resourceType(resource: unknown): string {
-  if (resource !== null && typeof resource === "object" && "Type" in resource) {
+  if (resource !== null && typeof resource === 'object' && 'Type' in resource) {
     const type = (resource as Record<string, unknown>).Type;
-    if (typeof type === "string") {
+    if (typeof type === 'string') {
       return type;
     }
   }
-  return "";
+  return '';
 }

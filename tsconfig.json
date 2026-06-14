@@ -1,26 +1,13 @@
 {
   "compilerOptions": {
-    "target": "esnext",
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "lib": [
-      "esnext"
-    ],
+    "declaration": true,
+    "erasableSyntaxOnly": true,
+    "outDir": "dist",
+    "rewriteRelativeImportExtensions": true,
+    "rootDir": "src",
     "types": [
       "node"
     ],
-    "rootDir": "src",
-    "outDir": "dist",
-    "declaration": true,
-    "sourceMap": false,
-    "strict": true,
-    "verbatimModuleSyntax": true,
-    "erasableSyntaxOnly": true,
-    "allowImportingTsExtensions": true,
-    "rewriteRelativeImportExtensions": true,
-    "skipLibCheck": true
-  },
-  "include": [
-    "src"
-  ]
+    "verbatimModuleSyntax": true
+  }
 }

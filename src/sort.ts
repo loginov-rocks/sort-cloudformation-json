@@ -1,7 +1,8 @@
-import type { ComparatorResolver } from "./compare.ts";
-import { compareKeys } from "./compare.ts";
-import { isDependsOnList, sortDependsOn } from "./dependsOn.ts";
-import { isTagList, sortTagsByKey } from "./tags.ts";
+import type { ComparatorResolver } from './compare.ts';
+
+import { compareKeys } from './compare.ts';
+import { isDependsOnList, sortDependsOn } from './dependsOn.ts';
+import { isTagList, sortTagsByKey } from './tags.ts';
 
 /**
  * Returns a deeply key-sorted copy of a value parsed from JSON.
@@ -29,21 +30,21 @@ export function sortValue(
     // Arrays keep their order, with two explicit, key-name-based exceptions:
     // a recognized `Tags` list is sorted by Key, and a recognized `DependsOn`
     // list of strings is sorted alphabetically.
-    const key = path[path.length - 1];
+    const key = path.at(-1);
     let elements: readonly unknown[] = value;
     if (isTagList(key, value)) {
       elements = sortTagsByKey(value);
     } else if (isDependsOnList(key, value)) {
       elements = sortDependsOn(value);
     }
-    return elements.map((item) => sortValue(item, resolveComparator, path));
+    return elements.map(item => sortValue(item, resolveComparator, path));
   }
 
-  if (value !== null && typeof value === "object") {
+  if (value !== null && typeof value === 'object') {
     const source = value as Record<string, unknown>;
     const compare = resolveComparator(path, source);
     const sorted: Record<string, unknown> = {};
-    for (const key of Object.keys(source).sort(compare)) {
+    for (const key of Object.keys(source).toSorted(compare)) {
       sorted[key] = sortValue(source[key], resolveComparator, [...path, key]);
     }
     return sorted;

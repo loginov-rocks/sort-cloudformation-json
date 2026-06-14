@@ -1,4 +1,4 @@
-import { createOrderedComparator } from "./compare.ts";
+import { createOrderedComparator } from './compare.ts';
 
 /**
  * The order of top-level sections in a CloudFormation template, as documented
@@ -10,16 +10,16 @@ import { createOrderedComparator } from "./compare.ts";
  * @see https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html
  */
 export const TEMPLATE_SECTION_ORDER: readonly string[] = [
-  "AWSTemplateFormatVersion",
-  "Description",
-  "Metadata",
-  "Parameters",
-  "Rules",
-  "Mappings",
-  "Conditions",
-  "Transform",
-  "Resources",
-  "Outputs",
+  'AWSTemplateFormatVersion',
+  'Description',
+  'Metadata',
+  'Parameters',
+  'Rules',
+  'Mappings',
+  'Conditions',
+  'Transform',
+  'Resources',
+  'Outputs',
 ];
 
 /**

@@ -1,4 +1,4 @@
-import { createOrderedComparator } from "./compare.ts";
+import { createOrderedComparator } from './compare.ts';
 
 /**
  * The order of keys within a single parameter definition (a direct child of the
@@ -12,17 +12,17 @@ import { createOrderedComparator } from "./compare.ts";
  * @see https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html
  */
 export const PARAMETER_ENTRY_ORDER: readonly string[] = [
-  "Type",
-  "Description",
-  "Default",
-  "AllowedValues",
-  "AllowedPattern",
-  "ConstraintDescription",
-  "MinLength",
-  "MaxLength",
-  "MinValue",
-  "MaxValue",
-  "NoEcho",
+  'Type',
+  'Description',
+  'Default',
+  'AllowedValues',
+  'AllowedPattern',
+  'ConstraintDescription',
+  'MinLength',
+  'MaxLength',
+  'MinValue',
+  'MaxValue',
+  'NoEcho',
 ];
 
 /**

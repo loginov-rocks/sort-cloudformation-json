@@ -1,94 +1,98 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
+import { formatFile } from './format.ts';
 
-import { formatFile } from "./format.ts";
-
-describe("formatFile", () => {
-  let dir: string;
+describe('formatFile', () => {
+  let directory: string;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "sort-cfn-"));
+    directory = await mkdtemp(path.join(tmpdir(), 'sort-cfn-'));
   });
 
   afterEach(async () => {
-    await rm(dir, { recursive: true, force: true });
+    await rm(directory, { force: true, recursive: true });
   });
 
   async function write(name: string, contents: string): Promise<string> {
-    const filePath = join(dir, name);
+    const filePath = path.join(directory, name);
     await writeFile(filePath, contents);
     return filePath;
   }
 
-  it("rewrites the file with sorted keys and 2-space indentation", async () => {
+  it('rewrites the file with sorted keys and 2-space indentation', async () => {
     const filePath = await write(
-      "template.json",
+      'template.json',
+      /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
       JSON.stringify({
-        Resources: { Bucket: { Type: "AWS::S3::Bucket", DeletionPolicy: "Retain" } },
-        AWSTemplateFormatVersion: "2010-09-09",
+        Resources: { Bucket: { Type: 'AWS::S3::Bucket', DeletionPolicy: 'Retain' } },
+        AWSTemplateFormatVersion: '2010-09-09',
       }),
+      /* eslint-enable perfectionist/sort-objects */
     );
 
     await formatFile(filePath);
 
-    expect(await readFile(filePath, "utf8")).toBe(
+    expect(await readFile(filePath, 'utf8')).toBe(
       [
-        "{",
+        '{',
         '  "AWSTemplateFormatVersion": "2010-09-09",',
         '  "Resources": {',
         '    "Bucket": {',
         '      "Type": "AWS::S3::Bucket",',
         '      "DeletionPolicy": "Retain"',
-        "    }",
-        "  }",
-        "}",
-      ].join("\n"),
+        '    }',
+        '  }',
+        '}',
+      ].join('\n'),
     );
   });
 
-  it("preserves a trailing newline when the original had one", async () => {
-    const filePath = await write("with-newline.json", '{"b":1,"a":2}\n');
+  it('preserves a trailing newline when the original had one', async () => {
+    const filePath = await write('with-newline.json', '{"b":1,"a":2}\n');
 
     await formatFile(filePath);
 
-    expect(await readFile(filePath, "utf8")).toBe('{\n  "a": 2,\n  "b": 1\n}\n');
+    expect(await readFile(filePath, 'utf8')).toBe('{\n  "a": 2,\n  "b": 1\n}\n');
   });
 
-  it("does not add a trailing newline when the original had none", async () => {
-    const filePath = await write("no-newline.json", '{"b":1,"a":2}');
+  it('does not add a trailing newline when the original had none', async () => {
+    const filePath = await write('no-newline.json', '{"b":1,"a":2}');
 
-    const result = await formatFile(filePath).then(() => readFile(filePath, "utf8"));
+    await formatFile(filePath);
+    const result = await readFile(filePath, 'utf8');
 
-    expect(result.endsWith("}")).toBe(true);
-    expect(result.endsWith("\n")).toBe(false);
+    expect(result.endsWith('}')).toBe(true);
+    expect(result.endsWith('\n')).toBe(false);
   });
 
-  it("preserves array order while sorting keys throughout a CloudFormation template", async () => {
+  it('preserves array order while sorting keys throughout a CloudFormation template', async () => {
     const filePath = await write(
-      "policy.json",
+      'policy.json',
+      /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
       JSON.stringify({
         Resources: {
           Policy: {
-            Type: "AWS::IAM::Policy",
+            Type: 'AWS::IAM::Policy',
             Properties: {
               PolicyDocument: {
-                Version: "2012-10-17",
+                Version: '2012-10-17',
                 Statement: [
-                  { Sid: "Second", Effect: "Allow", Action: ["s3:GetObject", "s3:PutObject"] },
-                  { Sid: "First", Effect: "Deny", Action: "s3:DeleteObject" },
+                  { Sid: 'Second', Effect: 'Allow', Action: ['s3:GetObject', 's3:PutObject'] },
+                  { Sid: 'First', Effect: 'Deny', Action: 's3:DeleteObject' },
                 ],
               },
             },
           },
         },
       }),
+      /* eslint-enable perfectionist/sort-objects */
     );
 
     await formatFile(filePath);
-    const result = JSON.parse(await readFile(filePath, "utf8")) as {
+    const result = JSON.parse(await readFile(filePath, 'utf8')) as {
       Resources: {
         Policy: { Properties: { PolicyDocument: { Statement: { Sid: string }[] } } };
       };
@@ -96,288 +100,302 @@ describe("formatFile", () => {
 
     const statements = result.Resources.Policy.Properties.PolicyDocument.Statement;
     // Array order is meaningful and must be preserved.
-    expect(statements.map((statement) => statement.Sid)).toEqual(["Second", "First"]);
+    expect(statements.map(statement => statement.Sid)).toEqual(['Second', 'First']);
     // Action arrays must keep their order too.
-    expect(await readFile(filePath, "utf8")).toContain('"s3:GetObject",\n');
+    expect(await readFile(filePath, 'utf8')).toContain('"s3:GetObject",\n');
   });
 
-  it("orders the root by CloudFormation section order while sorting nested keys alphabetically", async () => {
+  it('orders the root by CloudFormation section order while sorting nested keys alphabetically', async () => {
     const filePath = await write(
-      "ordered.json",
+      'ordered.json',
+      /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
       JSON.stringify({
-        Outputs: { BucketArn: { Value: "arn" } },
-        CustomTooling: { note: "vendor extension" },
-        Resources: { Bucket: { Type: "AWS::S3::Bucket", DeletionPolicy: "Retain" } },
-        Description: "Example stack",
-        Parameters: { EnvName: { Type: "String", Default: "dev" } },
-        AWSTemplateFormatVersion: "2010-09-09",
+        Outputs: { BucketArn: { Value: 'arn' } },
+        CustomTooling: { note: 'vendor extension' },
+        Resources: { Bucket: { Type: 'AWS::S3::Bucket', DeletionPolicy: 'Retain' } },
+        Description: 'Example stack',
+        Parameters: { EnvName: { Type: 'String', Default: 'dev' } },
+        AWSTemplateFormatVersion: '2010-09-09',
       }),
+      /* eslint-enable perfectionist/sort-objects */
     );
 
     await formatFile(filePath);
-    const result = JSON.parse(await readFile(filePath, "utf8")) as Record<string, unknown>;
+    const result = JSON.parse(await readFile(filePath, 'utf8')) as Record<string, unknown>;
 
     // Root keys follow the documented section order; the unknown "CustomTooling"
     // key is preserved and placed last.
     expect(Object.keys(result)).toEqual([
-      "AWSTemplateFormatVersion",
-      "Description",
-      "Parameters",
-      "Resources",
-      "Outputs",
-      "CustomTooling",
+      'AWSTemplateFormatVersion',
+      'Description',
+      'Parameters',
+      'Resources',
+      'Outputs',
+      'CustomTooling',
     ]);
 
     // Nested objects remain alphabetical.
-    expect(Object.keys(result.Resources as Record<string, unknown>)).toEqual(["Bucket"]);
+    expect(Object.keys(result.Resources as Record<string, unknown>)).toEqual(['Bucket']);
     const bucket = (result.Resources as { Bucket: Record<string, unknown> }).Bucket;
     // Resource definition: Type first, then remaining attributes alphabetically.
-    expect(Object.keys(bucket)).toEqual(["Type", "DeletionPolicy"]);
+    expect(Object.keys(bucket)).toEqual(['Type', 'DeletionPolicy']);
     // Parameter definition: Type first, then the conventional order.
     expect(Object.keys((result.Parameters as { EnvName: object }).EnvName)).toEqual([
-      "Type",
-      "Default",
+      'Type',
+      'Default',
     ]);
   });
 
-  it("orders resource attributes by the conventional order without hoisting nested Type keys", async () => {
+  it('orders resource attributes by the conventional order without hoisting nested Type keys', async () => {
     const filePath = await write(
-      "resources.json",
+      'resources.json',
+      /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
       JSON.stringify({
         Resources: {
           RecordSet: {
-            DeletionPolicy: "Retain",
+            DeletionPolicy: 'Retain',
             Properties: {
               // A Route 53 record set's own "Type" property must stay
               // alphabetical inside Properties, never hoisted to the front.
-              Type: "A",
-              Name: "example.com",
-              HostedZoneId: "Z123",
+              Type: 'A',
+              Name: 'example.com',
+              HostedZoneId: 'Z123',
             },
-            Type: "AWS::Route53::RecordSet",
-            DependsOn: "HostedZone",
-            Condition: "IsProd",
+            Type: 'AWS::Route53::RecordSet',
+            DependsOn: 'HostedZone',
+            Condition: 'IsProd',
           },
         },
       }),
+      /* eslint-enable perfectionist/sort-objects */
     );
 
     await formatFile(filePath);
     const resource = (
-      JSON.parse(await readFile(filePath, "utf8")) as {
+      JSON.parse(await readFile(filePath, 'utf8')) as {
         Resources: { RecordSet: Record<string, unknown> };
       }
     ).Resources.RecordSet;
 
     // Resource attributes follow the conventional order.
     expect(Object.keys(resource)).toEqual([
-      "Type",
-      "Condition",
-      "DependsOn",
-      "Properties",
-      "DeletionPolicy",
+      'Type',
+      'Condition',
+      'DependsOn',
+      'Properties',
+      'DeletionPolicy',
     ]);
 
     // The nested "Type" inside Properties is sorted alphabetically, not hoisted.
     expect(Object.keys(resource.Properties as Record<string, unknown>)).toEqual([
-      "HostedZoneId",
-      "Name",
-      "Type",
+      'HostedZoneId',
+      'Name',
+      'Type',
     ]);
   });
 
-  it("orders Resources by Type then logical ID, robust to a missing Type, keeping attribute order", async () => {
+  it('orders Resources by Type then logical ID, robust to a missing Type, keeping attribute order', async () => {
     const filePath = await write(
-      "by-type.json",
+      'by-type.json',
+      /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
       JSON.stringify({
         Resources: {
-          WebQueue: { Type: "AWS::SQS::Queue", Properties: { QueueName: "web" } },
-          AppBucket: { Type: "AWS::S3::Bucket", Properties: { BucketName: "app" } },
-          Mystery: { Properties: { Note: "no type here" } },
-          DataQueue: { Type: "AWS::SQS::Queue", Properties: { QueueName: "data" } },
-          LogsBucket: { Type: "AWS::S3::Bucket", Properties: { BucketName: "logs" } },
+          WebQueue: { Type: 'AWS::SQS::Queue', Properties: { QueueName: 'web' } },
+          AppBucket: { Type: 'AWS::S3::Bucket', Properties: { BucketName: 'app' } },
+          Mystery: { Properties: { Note: 'no type here' } },
+          DataQueue: { Type: 'AWS::SQS::Queue', Properties: { QueueName: 'data' } },
+          LogsBucket: { Type: 'AWS::S3::Bucket', Properties: { BucketName: 'logs' } },
         },
       }),
+      /* eslint-enable perfectionist/sort-objects */
     );
 
     await formatFile(filePath);
-    const result = JSON.parse(await readFile(filePath, "utf8")) as {
+    const result = JSON.parse(await readFile(filePath, 'utf8')) as {
       Resources: Record<string, Record<string, unknown>>;
     };
 
     // Grouped by Type (missing Type == "" sorts first), alphabetical by ID within group.
     expect(Object.keys(result.Resources)).toEqual([
-      "Mystery", // no Type -> empty string -> first
-      "AppBucket", // AWS::S3::Bucket
-      "LogsBucket", // AWS::S3::Bucket
-      "DataQueue", // AWS::SQS::Queue
-      "WebQueue", // AWS::SQS::Queue
+      'Mystery', // no Type -> empty string -> first
+      'AppBucket', // AWS::S3::Bucket
+      'LogsBucket', // AWS::S3::Bucket
+      'DataQueue', // AWS::SQS::Queue
+      'WebQueue', // AWS::SQS::Queue
     ]);
 
     // Rule 2 still applies inside each resource (Type before Properties).
-    expect(Object.keys(result.Resources.AppBucket)).toEqual(["Type", "Properties"]);
+    expect(Object.keys(result.Resources.AppBucket)).toEqual(['Type', 'Properties']);
     // The Type-less resource is not dropped and keeps alphabetical contents.
-    expect(result.Resources.Mystery).toEqual({ Properties: { Note: "no type here" } });
+    expect(result.Resources.Mystery).toEqual({ Properties: { Note: 'no type here' } });
   });
 
-  it("orders output entries (Description, Value, Export, then the rest) without hoisting nested keys", async () => {
+  it('orders output entries (Description, Value, Export, then the rest) without hoisting nested keys', async () => {
     const filePath = await write(
-      "outputs.json",
+      'outputs.json',
+      /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
       JSON.stringify({
         Outputs: {
           BucketArn: {
-            Export: { Name: "bucket-arn" },
-            Condition: "IsProd",
-            Value: { "Fn::GetAtt": ["Bucket", "Arn"] },
-            Description: "The bucket ARN",
+            Export: { Name: 'bucket-arn' },
+            Condition: 'IsProd',
+            Value: { 'Fn::GetAtt': ['Bucket', 'Arn'] },
+            Description: 'The bucket ARN',
           },
         },
         Resources: {
           // A Properties value that happens to contain Value/Description/Export
           // keys must stay alphabetical, never reordered like an output.
-          Thing: { Type: "Custom::Thing", Properties: { Value: 1, Export: 2, Description: 3 } },
+          Thing: { Type: 'Custom::Thing', Properties: { Value: 1, Export: 2, Description: 3 } },
         },
       }),
+      /* eslint-enable perfectionist/sort-objects */
     );
 
     await formatFile(filePath);
-    const result = JSON.parse(await readFile(filePath, "utf8")) as {
+    const result = JSON.parse(await readFile(filePath, 'utf8')) as {
       Outputs: { BucketArn: Record<string, unknown> };
       Resources: { Thing: { Properties: Record<string, unknown> } };
     };
 
     // Output entry: Description, Value, Export, then the rest alphabetically.
     expect(Object.keys(result.Outputs.BucketArn)).toEqual([
-      "Description",
-      "Value",
-      "Export",
-      "Condition",
+      'Description',
+      'Value',
+      'Export',
+      'Condition',
     ]);
 
     // Look-alike keys deep inside a resource's Properties stay alphabetical.
     expect(Object.keys(result.Resources.Thing.Properties)).toEqual([
-      "Description",
-      "Export",
-      "Value",
+      'Description',
+      'Export',
+      'Value',
     ]);
   });
 
-  it("orders parameter entries (Type first, then convention) without hoisting a resource's Type", async () => {
+  it('orders parameter entries (Type first, then convention) without hoisting a resource\'s Type', async () => {
     const filePath = await write(
-      "parameters.json",
+      'parameters.json',
+      /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
       JSON.stringify({
         Parameters: {
           EnvName: {
             NoEcho: false,
-            Custom: "x",
-            AllowedValues: ["prod", "dev"],
-            Default: "dev",
-            Description: "Target environment",
-            Type: "String",
+            Custom: 'x',
+            AllowedValues: ['prod', 'dev'],
+            Default: 'dev',
+            Description: 'Target environment',
+            Type: 'String',
           },
         },
         Resources: {
           // An SSM Parameter resource: its Properties.Type must stay
           // alphabetical, never reordered by the parameter rule.
-          Setting: { Type: "AWS::SSM::Parameter", Properties: { Value: "v", Type: "String" } },
+          Setting: { Type: 'AWS::SSM::Parameter', Properties: { Value: 'v', Type: 'String' } },
         },
       }),
+      /* eslint-enable perfectionist/sort-objects */
     );
 
     await formatFile(filePath);
-    const result = JSON.parse(await readFile(filePath, "utf8")) as {
+    const result = JSON.parse(await readFile(filePath, 'utf8')) as {
       Parameters: { EnvName: Record<string, unknown> };
       Resources: { Setting: { Properties: Record<string, unknown> } };
     };
 
     // Parameter entry: Type first, conventional order, unknown key last.
     expect(Object.keys(result.Parameters.EnvName)).toEqual([
-      "Type",
-      "Description",
-      "Default",
-      "AllowedValues",
-      "NoEcho",
-      "Custom",
+      'Type',
+      'Description',
+      'Default',
+      'AllowedValues',
+      'NoEcho',
+      'Custom',
     ]);
 
     // AllowedValues array order is preserved.
-    expect(result.Parameters.EnvName.AllowedValues).toEqual(["prod", "dev"]);
+    expect(result.Parameters.EnvName.AllowedValues).toEqual(['prod', 'dev']);
 
     // A resource's Properties.Type is not affected by the parameter rule.
-    expect(Object.keys(result.Resources.Setting.Properties)).toEqual(["Type", "Value"]);
+    expect(Object.keys(result.Resources.Setting.Properties)).toEqual(['Type', 'Value']);
   });
 
-  it("sorts a resource's Tags array by Key while preserving other array order", async () => {
+  it('sorts a resource\'s Tags array by Key while preserving other array order', async () => {
     const filePath = await write(
-      "tags.json",
+      'tags.json',
+      /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
       JSON.stringify({
         Resources: {
           Bucket: {
-            Type: "AWS::S3::Bucket",
+            Type: 'AWS::S3::Bucket',
             Properties: {
               Tags: [
-                { Value: "team-a", Key: "owner" },
-                { Value: "prod", Key: "env" },
-                { Value: "web", Key: "app" },
+                { Value: 'team-a', Key: 'owner' },
+                { Value: 'prod', Key: 'env' },
+                { Value: 'web', Key: 'app' },
               ],
               // A non-tag array under a different key keeps its order.
-              Rules: [{ Id: "b" }, { Id: "a" }],
+              Rules: [{ Id: 'b' }, { Id: 'a' }],
               // A "Tags" value that is not an array is sorted as a normal object.
               NotReallyTags: { z: 1, a: 2 },
             },
           },
         },
       }),
+      /* eslint-enable perfectionist/sort-objects */
     );
 
     await formatFile(filePath);
     const properties = (
-      JSON.parse(await readFile(filePath, "utf8")) as {
+      JSON.parse(await readFile(filePath, 'utf8')) as {
         Resources: { Bucket: { Properties: Record<string, unknown> } };
       }
     ).Resources.Bucket.Properties;
 
     // Tags reordered by Key; each tag's keys alphabetical (Key before Value).
     expect(properties.Tags).toEqual([
-      { Key: "app", Value: "web" },
-      { Key: "env", Value: "prod" },
-      { Key: "owner", Value: "team-a" },
+      { Key: 'app', Value: 'web' },
+      { Key: 'env', Value: 'prod' },
+      { Key: 'owner', Value: 'team-a' },
     ]);
 
     // Other arrays keep their original order.
-    expect((properties.Rules as { Id: string }[]).map((rule) => rule.Id)).toEqual(["b", "a"]);
+    expect((properties.Rules as { Id: string }[]).map(rule => rule.Id)).toEqual(['b', 'a']);
 
     // An object-valued "Tags" look-alike is just sorted alphabetically.
-    expect(Object.keys(properties.NotReallyTags as object)).toEqual(["a", "z"]);
+    expect(Object.keys(properties.NotReallyTags as object)).toEqual(['a', 'z']);
   });
 
-  it("sorts a resource's DependsOn array of strings alphabetically", async () => {
+  it('sorts a resource\'s DependsOn array of strings alphabetically', async () => {
     const filePath = await write(
-      "depends-on.json",
+      'depends-on.json',
+      /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
       JSON.stringify({
         Resources: {
           App: {
-            Type: "AWS::ECS::Service",
-            DependsOn: ["Web", "Db", "Cache"],
+            Type: 'AWS::ECS::Service',
+            DependsOn: ['Web', 'Db', 'Cache'],
           },
         },
       }),
+      /* eslint-enable perfectionist/sort-objects */
     );
 
     await formatFile(filePath);
     const app = (
-      JSON.parse(await readFile(filePath, "utf8")) as {
+      JSON.parse(await readFile(filePath, 'utf8')) as {
         Resources: { App: Record<string, unknown> };
       }
     ).Resources.App;
 
-    expect(app.DependsOn).toEqual(["Cache", "Db", "Web"]);
+    expect(app.DependsOn).toEqual(['Cache', 'Db', 'Web']);
     // Rule 2 still applies: Type, then the remaining attributes.
-    expect(Object.keys(app)).toEqual(["Type", "DependsOn"]);
+    expect(Object.keys(app)).toEqual(['Type', 'DependsOn']);
   });
 
-  it("rejects when the file does not contain valid JSON", async () => {
-    const filePath = await write("broken.json", "{ not json");
+  it('rejects when the file does not contain valid JSON', async () => {
+    const filePath = await write('broken.json', '{ not json');
 
     await expect(formatFile(filePath)).rejects.toThrow();
   });

@@ -1,17 +1,7 @@
-import { compareKeys } from "./compare.ts";
+import { compareKeys } from './compare.ts';
 
 /** The key whose array value is the sole exception to preserving array order. */
-const TAGS_KEY = "Tags";
-
-/** A tag is an object with a string `Key`. */
-function isTag(element: unknown): element is { Key: string } {
-  return (
-    element !== null &&
-    typeof element === "object" &&
-    "Key" in element &&
-    typeof (element as Record<string, unknown>).Key === "string"
-  );
-}
+const TAGS_KEY = 'Tags';
 
 /**
  * True when an array is safely recognizable as a CloudFormation tag list: it is
@@ -32,5 +22,15 @@ export function isTagList(key: string | undefined, value: readonly unknown[]): b
  * Callers must first confirm the array is a tag list with {@link isTagList}.
  */
 export function sortTagsByKey(tags: readonly unknown[]): unknown[] {
-  return [...tags].sort((a, b) => compareKeys((a as { Key: string }).Key, (b as { Key: string }).Key));
+  return tags.toSorted((a, b) => compareKeys((a as { Key: string }).Key, (b as { Key: string }).Key));
+}
+
+/** A tag is an object with a string `Key`. */
+function isTag(element: unknown): element is { Key: string } {
+  return (
+    element !== null
+    && typeof element === 'object'
+    && 'Key' in element
+    && typeof (element as Record<string, unknown>).Key === 'string'
+  );
 }
