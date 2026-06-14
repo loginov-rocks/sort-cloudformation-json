@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
 import { compareKeys } from "./compare.ts";
+import { compareOutputEntry } from "./outputs.ts";
 import { compareResourceAttributes } from "./resources.ts";
 import { compareTopLevelSections } from "./sections.ts";
 import { resolveTemplateComparator } from "./templateOrder.ts";
@@ -25,6 +26,14 @@ describe("resolveTemplateComparator", () => {
     // S3 Bucket type sorts before SQS Queue type, so Beta comes before Alpha.
     expect(compare("Alpha", "Beta")).toBeGreaterThan(0);
     expect(compare).not.toBe(compareKeys);
+  });
+
+  it("uses the output entry order for a direct child of root Outputs", () => {
+    expect(resolveTemplateComparator(["Outputs", "BucketArn"], {})).toBe(compareOutputEntry);
+  });
+
+  it("sorts below an output (e.g. inside Value/Export) alphabetically", () => {
+    expect(resolveTemplateComparator(["Outputs", "BucketArn", "Export"], {})).toBe(compareKeys);
   });
 
   it("sorts below a resource (e.g. inside Properties) alphabetically", () => {

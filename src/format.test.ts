@@ -219,6 +219,48 @@ describe("formatFile", () => {
     expect(result.Resources.Mystery).toEqual({ Properties: { Note: "no type here" } });
   });
 
+  it("orders output entries (Description, Value, Export, then the rest) without hoisting nested keys", async () => {
+    const filePath = await write(
+      "outputs.json",
+      JSON.stringify({
+        Outputs: {
+          BucketArn: {
+            Export: { Name: "bucket-arn" },
+            Condition: "IsProd",
+            Value: { "Fn::GetAtt": ["Bucket", "Arn"] },
+            Description: "The bucket ARN",
+          },
+        },
+        Resources: {
+          // A Properties value that happens to contain Value/Description/Export
+          // keys must stay alphabetical, never reordered like an output.
+          Thing: { Type: "Custom::Thing", Properties: { Value: 1, Export: 2, Description: 3 } },
+        },
+      }),
+    );
+
+    await formatFile(filePath);
+    const result = JSON.parse(await readFile(filePath, "utf8")) as {
+      Outputs: { BucketArn: Record<string, unknown> };
+      Resources: { Thing: { Properties: Record<string, unknown> } };
+    };
+
+    // Output entry: Description, Value, Export, then the rest alphabetically.
+    expect(Object.keys(result.Outputs.BucketArn)).toEqual([
+      "Description",
+      "Value",
+      "Export",
+      "Condition",
+    ]);
+
+    // Look-alike keys deep inside a resource's Properties stay alphabetical.
+    expect(Object.keys(result.Resources.Thing.Properties)).toEqual([
+      "Description",
+      "Export",
+      "Value",
+    ]);
+  });
+
   it("rejects when the file does not contain valid JSON", async () => {
     const filePath = await write("broken.json", "{ not json");
 
