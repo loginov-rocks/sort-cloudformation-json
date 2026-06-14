@@ -101,6 +101,43 @@ describe("formatFile", () => {
     expect(await readFile(filePath, "utf8")).toContain('"s3:GetObject",\n');
   });
 
+  it("orders the root by CloudFormation section order while sorting nested keys alphabetically", async () => {
+    const filePath = await write(
+      "ordered.json",
+      JSON.stringify({
+        Outputs: { BucketArn: { Value: "arn" } },
+        CustomTooling: { note: "vendor extension" },
+        Resources: { Bucket: { Type: "AWS::S3::Bucket", DeletionPolicy: "Retain" } },
+        Description: "Example stack",
+        Parameters: { EnvName: { Type: "String", Default: "dev" } },
+        AWSTemplateFormatVersion: "2010-09-09",
+      }),
+    );
+
+    await formatFile(filePath);
+    const result = JSON.parse(await readFile(filePath, "utf8")) as Record<string, unknown>;
+
+    // Root keys follow the documented section order; the unknown "CustomTooling"
+    // key is preserved and placed last.
+    expect(Object.keys(result)).toEqual([
+      "AWSTemplateFormatVersion",
+      "Description",
+      "Parameters",
+      "Resources",
+      "Outputs",
+      "CustomTooling",
+    ]);
+
+    // Nested objects remain alphabetical.
+    expect(Object.keys(result.Resources as Record<string, unknown>)).toEqual(["Bucket"]);
+    const bucket = (result.Resources as { Bucket: Record<string, unknown> }).Bucket;
+    expect(Object.keys(bucket)).toEqual(["DeletionPolicy", "Type"]);
+    expect(Object.keys((result.Parameters as { EnvName: object }).EnvName)).toEqual([
+      "Default",
+      "Type",
+    ]);
+  });
+
   it("rejects when the file does not contain valid JSON", async () => {
     const filePath = await write("broken.json", "{ not json");
 

@@ -1,3 +1,6 @@
+/** Orders two object keys; follows the `Array.prototype.sort` contract. */
+export type Comparator = (a: string, b: string) => number;
+
 /**
  * Comparator used to order object keys.
  *

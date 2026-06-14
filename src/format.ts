@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 
+import { compareTopLevelSections } from "./sections.ts";
 import { sortValue } from "./sort.ts";
 
 /**
@@ -9,7 +10,9 @@ import { sortValue } from "./sort.ts";
  */
 export async function formatFile(filePath: string): Promise<void> {
   const original = await readFile(filePath, "utf8");
-  const sorted = sortValue(JSON.parse(original));
+  // The root object follows the fixed CloudFormation section order; everything
+  // nested below it is sorted alphabetically.
+  const sorted = sortValue(JSON.parse(original), compareTopLevelSections);
 
   const trailingNewline = original.endsWith("\n") ? "\n" : "";
   await writeFile(filePath, JSON.stringify(sorted, null, 2) + trailingNewline);

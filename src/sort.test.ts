@@ -67,6 +67,19 @@ describe("sortValue", () => {
     });
   });
 
+  it("applies a custom comparator to the top level only, keeping nested objects alphabetical", () => {
+    // Reverse comparator on the root; nested objects must ignore it.
+    const reverse = (a: string, b: string): number => (a < b ? 1 : a > b ? -1 : 0);
+
+    const sorted = sortValue({ a: 1, b: 2, nested: { y: 1, x: 2 } }, reverse) as Record<
+      string,
+      unknown
+    >;
+
+    expect(Object.keys(sorted)).toEqual(["nested", "b", "a"]);
+    expect(Object.keys(sorted.nested as object)).toEqual(["x", "y"]);
+  });
+
   it("does not mutate the input value", () => {
     const template = { B: 1, A: 2 };
 
