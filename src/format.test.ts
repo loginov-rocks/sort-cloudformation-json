@@ -40,8 +40,8 @@ describe("formatFile", () => {
         '  "AWSTemplateFormatVersion": "2010-09-09",',
         '  "Resources": {',
         '    "Bucket": {',
-        '      "DeletionPolicy": "Retain",',
-        '      "Type": "AWS::S3::Bucket"',
+        '      "Type": "AWS::S3::Bucket",',
+        '      "DeletionPolicy": "Retain"',
         "    }",
         "  }",
         "}",
@@ -131,9 +131,56 @@ describe("formatFile", () => {
     // Nested objects remain alphabetical.
     expect(Object.keys(result.Resources as Record<string, unknown>)).toEqual(["Bucket"]);
     const bucket = (result.Resources as { Bucket: Record<string, unknown> }).Bucket;
-    expect(Object.keys(bucket)).toEqual(["DeletionPolicy", "Type"]);
+    // Resource definition: Type first, then remaining attributes alphabetically.
+    expect(Object.keys(bucket)).toEqual(["Type", "DeletionPolicy"]);
     expect(Object.keys((result.Parameters as { EnvName: object }).EnvName)).toEqual([
       "Default",
+      "Type",
+    ]);
+  });
+
+  it("orders resource attributes (Type, Properties, then the rest) without hoisting nested Type keys", async () => {
+    const filePath = await write(
+      "resources.json",
+      JSON.stringify({
+        Resources: {
+          RecordSet: {
+            DeletionPolicy: "Retain",
+            Properties: {
+              // A Route 53 record set's own "Type" property must stay
+              // alphabetical inside Properties, never hoisted to the front.
+              Type: "A",
+              Name: "example.com",
+              HostedZoneId: "Z123",
+            },
+            Type: "AWS::Route53::RecordSet",
+            DependsOn: "HostedZone",
+            Condition: "IsProd",
+          },
+        },
+      }),
+    );
+
+    await formatFile(filePath);
+    const resource = (
+      JSON.parse(await readFile(filePath, "utf8")) as {
+        Resources: { RecordSet: Record<string, unknown> };
+      }
+    ).Resources.RecordSet;
+
+    // Resource attributes: Type, Properties, then the rest alphabetically.
+    expect(Object.keys(resource)).toEqual([
+      "Type",
+      "Properties",
+      "Condition",
+      "DeletionPolicy",
+      "DependsOn",
+    ]);
+
+    // The nested "Type" inside Properties is sorted alphabetically, not hoisted.
+    expect(Object.keys(resource.Properties as Record<string, unknown>)).toEqual([
+      "HostedZoneId",
+      "Name",
       "Type",
     ]);
   });

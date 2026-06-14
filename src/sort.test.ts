@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
+import { compareKeys } from "./compare.ts";
 import { sortValue } from "./sort.ts";
 
 describe("sortValue", () => {
@@ -67,17 +68,33 @@ describe("sortValue", () => {
     });
   });
 
-  it("applies a custom comparator to the top level only, keeping nested objects alphabetical", () => {
-    // Reverse comparator on the root; nested objects must ignore it.
+  it("consults the resolver per object using its path, defaulting deeper levels", () => {
     const reverse = (a: string, b: string): number => (a < b ? 1 : a > b ? -1 : 0);
+    // Reverse only the root object's keys; everything deeper stays alphabetical.
+    const resolve = (path: readonly string[]) => (path.length === 0 ? reverse : compareKeys);
 
-    const sorted = sortValue({ a: 1, b: 2, nested: { y: 1, x: 2 } }, reverse) as Record<
-      string,
-      unknown
-    >;
+    const sorted = sortValue(
+      { a: 1, b: 2, nested: { y: 1, x: 2 } },
+      resolve,
+    ) as Record<string, unknown>;
 
     expect(Object.keys(sorted)).toEqual(["nested", "b", "a"]);
     expect(Object.keys(sorted.nested as object)).toEqual(["x", "y"]);
+  });
+
+  it("treats arrays as transparent to the path (indices are not path segments)", () => {
+    const seen: string[][] = [];
+    const resolve = (path: readonly string[]) => {
+      seen.push([...path]);
+      return compareKeys;
+    };
+
+    sortValue({ list: [{ b: 1 }, { a: 2 }] }, resolve);
+
+    // The objects inside the array are both reached at path ["list"], not
+    // ["list", 0] / ["list", 1].
+    expect(seen).toContainEqual(["list"]);
+    expect(seen).toEqual([[], ["list"], ["list"]]);
   });
 
   it("does not mutate the input value", () => {
