@@ -97,6 +97,37 @@ describe("sortValue", () => {
     expect(seen).toEqual([[], ["list"], ["list"]]);
   });
 
+  it("reorders a recognized Tags array by Key while leaving other arrays in place", () => {
+    const value = {
+      Tags: [
+        { Value: "team-a", Key: "owner" },
+        { Value: "prod", Key: "env" },
+      ],
+      NotTags: [{ Key: "z" }, { Key: "a" }],
+    };
+
+    const sorted = sortValue(value) as {
+      Tags: Record<string, string>[];
+      NotTags: Record<string, string>[];
+    };
+
+    // Tags reordered by Key, and each tag's own keys sorted alphabetically.
+    expect(sorted.Tags).toEqual([
+      { Key: "env", Value: "prod" },
+      { Key: "owner", Value: "team-a" },
+    ]);
+    // A same-shaped array under a different key keeps its original order.
+    expect(sorted.NotTags.map((item) => item.Key)).toEqual(["z", "a"]);
+  });
+
+  it("leaves a Tags array untouched when an element is not tag-shaped", () => {
+    const value = { Tags: [{ Key: "b" }, { NotAKey: "x" }] };
+
+    const sorted = sortValue(value) as { Tags: Record<string, unknown>[] };
+
+    expect(sorted.Tags).toEqual([{ Key: "b" }, { NotAKey: "x" }]);
+  });
+
   it("does not mutate the input value", () => {
     const template = { B: 1, A: 2 };
 

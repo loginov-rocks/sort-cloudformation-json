@@ -1,5 +1,6 @@
 import type { ComparatorResolver } from "./compare.ts";
 import { compareKeys } from "./compare.ts";
+import { isTagList, sortTagsByKey } from "./tags.ts";
 
 /**
  * Returns a deeply key-sorted copy of a value parsed from JSON.
@@ -9,6 +10,7 @@ import { compareKeys } from "./compare.ts";
  * - Arrays: element order is preserved (it is meaningful in CloudFormation) but
  *   each element is still recursed into so objects nested in arrays get sorted.
  *   Array indices are not part of the path — an array is transparent to it.
+ *   The sole exception is a recognized `Tags` array, which is reordered by `Key`.
  * - Everything else (strings, numbers, booleans, null) is returned unchanged.
  *
  * `path` is the sequence of object keys traversed from the root to the current
@@ -22,7 +24,11 @@ export function sortValue(
   path: readonly string[] = [],
 ): unknown {
   if (Array.isArray(value)) {
-    return value.map((item) => sortValue(item, resolveComparator, path));
+    // Arrays keep their order, with one explicit exception: a recognized `Tags`
+    // list (the array under a key named "Tags", all tag-shaped) is sorted by Key.
+    const key = path[path.length - 1];
+    const elements = isTagList(key, value) ? sortTagsByKey(value) : value;
+    return elements.map((item) => sortValue(item, resolveComparator, path));
   }
 
   if (value !== null && typeof value === "object") {

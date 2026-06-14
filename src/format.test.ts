@@ -307,6 +307,50 @@ describe("formatFile", () => {
     expect(Object.keys(result.Resources.Setting.Properties)).toEqual(["Type", "Value"]);
   });
 
+  it("sorts a resource's Tags array by Key while preserving other array order", async () => {
+    const filePath = await write(
+      "tags.json",
+      JSON.stringify({
+        Resources: {
+          Bucket: {
+            Type: "AWS::S3::Bucket",
+            Properties: {
+              Tags: [
+                { Value: "team-a", Key: "owner" },
+                { Value: "prod", Key: "env" },
+                { Value: "web", Key: "app" },
+              ],
+              // A non-tag array under a different key keeps its order.
+              Rules: [{ Id: "b" }, { Id: "a" }],
+              // A "Tags" value that is not an array is sorted as a normal object.
+              NotReallyTags: { z: 1, a: 2 },
+            },
+          },
+        },
+      }),
+    );
+
+    await formatFile(filePath);
+    const properties = (
+      JSON.parse(await readFile(filePath, "utf8")) as {
+        Resources: { Bucket: { Properties: Record<string, unknown> } };
+      }
+    ).Resources.Bucket.Properties;
+
+    // Tags reordered by Key; each tag's keys alphabetical (Key before Value).
+    expect(properties.Tags).toEqual([
+      { Key: "app", Value: "web" },
+      { Key: "env", Value: "prod" },
+      { Key: "owner", Value: "team-a" },
+    ]);
+
+    // Other arrays keep their original order.
+    expect((properties.Rules as { Id: string }[]).map((rule) => rule.Id)).toEqual(["b", "a"]);
+
+    // An object-valued "Tags" look-alike is just sorted alphabetically.
+    expect(Object.keys(properties.NotReallyTags as object)).toEqual(["a", "z"]);
+  });
+
   it("rejects when the file does not contain valid JSON", async () => {
     const filePath = await write("broken.json", "{ not json");
 
