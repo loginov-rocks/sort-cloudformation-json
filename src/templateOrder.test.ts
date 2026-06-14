@@ -1,34 +1,41 @@
 import { describe, expect, it } from "@jest/globals";
 
+import { compareKeys } from "./compare.ts";
 import { compareResourceAttributes } from "./resources.ts";
 import { compareTopLevelSections } from "./sections.ts";
 import { resolveTemplateComparator } from "./templateOrder.ts";
 
 describe("resolveTemplateComparator", () => {
   it("uses the section order for the root object", () => {
-    expect(resolveTemplateComparator([])).toBe(compareTopLevelSections);
+    expect(resolveTemplateComparator([], {})).toBe(compareTopLevelSections);
   });
 
   it("uses the resource attribute order for a direct child of root Resources", () => {
-    expect(resolveTemplateComparator(["Resources", "MyBucket"])).toBe(compareResourceAttributes);
+    expect(resolveTemplateComparator(["Resources", "MyBucket"], {})).toBe(compareResourceAttributes);
   });
 
-  it("does not apply the resource order to the Resources container itself", () => {
-    // The Resources object's own keys are logical IDs, sorted alphabetically.
-    expect(resolveTemplateComparator(["Resources"])).not.toBe(compareResourceAttributes);
+  it("orders the root Resources object's entries by their nested Type", () => {
+    const resources = {
+      Alpha: { Type: "AWS::SQS::Queue" },
+      Beta: { Type: "AWS::S3::Bucket" },
+    };
+
+    const compare = resolveTemplateComparator(["Resources"], resources);
+
+    // S3 Bucket type sorts before SQS Queue type, so Beta comes before Alpha.
+    expect(compare("Alpha", "Beta")).toBeGreaterThan(0);
+    expect(compare).not.toBe(compareKeys);
   });
 
-  it("does not apply the resource order below a resource (e.g. inside Properties)", () => {
+  it("sorts below a resource (e.g. inside Properties) alphabetically", () => {
     // A `Type` key here (SSM parameter, Route 53 record set, ...) must stay
     // alphabetical, never hoisted.
-    expect(
-      resolveTemplateComparator(["Resources", "MyParam", "Properties"]),
-    ).not.toBe(compareResourceAttributes);
+    expect(resolveTemplateComparator(["Resources", "MyParam", "Properties"], {})).toBe(compareKeys);
   });
 
-  it("does not apply the resource order to a deeper key that merely equals 'Resources'", () => {
+  it("sorts a deeper key that merely equals 'Resources' alphabetically", () => {
     expect(
-      resolveTemplateComparator(["Resources", "MyRes", "Properties", "Resources"]),
-    ).not.toBe(compareResourceAttributes);
+      resolveTemplateComparator(["Resources", "MyRes", "Properties", "Resources"], {}),
+    ).toBe(compareKeys);
   });
 });

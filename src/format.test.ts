@@ -185,6 +185,40 @@ describe("formatFile", () => {
     ]);
   });
 
+  it("orders Resources by Type then logical ID, robust to a missing Type, keeping attribute order", async () => {
+    const filePath = await write(
+      "by-type.json",
+      JSON.stringify({
+        Resources: {
+          WebQueue: { Type: "AWS::SQS::Queue", Properties: { QueueName: "web" } },
+          AppBucket: { Type: "AWS::S3::Bucket", Properties: { BucketName: "app" } },
+          Mystery: { Properties: { Note: "no type here" } },
+          DataQueue: { Type: "AWS::SQS::Queue", Properties: { QueueName: "data" } },
+          LogsBucket: { Type: "AWS::S3::Bucket", Properties: { BucketName: "logs" } },
+        },
+      }),
+    );
+
+    await formatFile(filePath);
+    const result = JSON.parse(await readFile(filePath, "utf8")) as {
+      Resources: Record<string, Record<string, unknown>>;
+    };
+
+    // Grouped by Type (missing Type == "" sorts first), alphabetical by ID within group.
+    expect(Object.keys(result.Resources)).toEqual([
+      "Mystery", // no Type -> empty string -> first
+      "AppBucket", // AWS::S3::Bucket
+      "LogsBucket", // AWS::S3::Bucket
+      "DataQueue", // AWS::SQS::Queue
+      "WebQueue", // AWS::SQS::Queue
+    ]);
+
+    // Rule 2 still applies inside each resource (Type before Properties).
+    expect(Object.keys(result.Resources.AppBucket)).toEqual(["Type", "Properties"]);
+    // The Type-less resource is not dropped and keeps alphabetical contents.
+    expect(result.Resources.Mystery).toEqual({ Properties: { Note: "no type here" } });
+  });
+
   it("rejects when the file does not contain valid JSON", async () => {
     const filePath = await write("broken.json", "{ not json");
 

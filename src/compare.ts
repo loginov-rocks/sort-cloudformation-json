@@ -2,13 +2,17 @@
 export type Comparator = (a: string, b: string) => number;
 
 /**
- * Resolves the comparator to use for an object's keys based on its path from the
- * root (the sequence of keys traversed to reach it). This is the seam that lets
- * structural rules — such as the root section order or per-resource attribute
- * order — depend on *where* an object sits, while everything else stays
- * alphabetical.
+ * Resolves the comparator to use for an object's keys, given its path from the
+ * root (the sequence of keys traversed to reach it) and the object itself. This
+ * is the seam that lets structural rules — such as the root section order, the
+ * per-resource attribute order, or ordering resources by their nested `Type` —
+ * depend on *where* an object sits and, when needed, on its contents, while
+ * everything else stays alphabetical.
  */
-export type ComparatorResolver = (path: readonly string[]) => Comparator;
+export type ComparatorResolver = (
+  path: readonly string[],
+  object: Readonly<Record<string, unknown>>,
+) => Comparator;
 
 /**
  * Comparator used to order object keys.

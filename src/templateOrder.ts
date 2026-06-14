@@ -1,6 +1,6 @@
 import type { Comparator } from "./compare.ts";
 import { compareKeys } from "./compare.ts";
-import { compareResourceAttributes } from "./resources.ts";
+import { compareResourceAttributes, compareResourcesByType } from "./resources.ts";
 import { compareTopLevelSections } from "./sections.ts";
 
 /**
@@ -9,6 +9,8 @@ import { compareTopLevelSections } from "./sections.ts";
  * the root to reach the object).
  *
  * - Root object (`path` is empty): the fixed section order.
+ * - The root `Resources` object itself (`["Resources"]`): its logical-ID entries
+ *   are grouped by each resource's `Type`, then alphabetical by logical ID.
  * - A direct child of the root `Resources` section (`["Resources", <id>]`): the
  *   fixed resource attribute order.
  * - Everywhere else: plain alphabetical order.
@@ -16,9 +18,16 @@ import { compareTopLevelSections } from "./sections.ts";
  * The position is matched strictly by path, so a `Type` or `Properties` key that
  * merely appears deeper in the tree is left to alphabetical sorting.
  */
-export function resolveTemplateComparator(path: readonly string[]): Comparator {
+export function resolveTemplateComparator(
+  path: readonly string[],
+  object: Readonly<Record<string, unknown>>,
+): Comparator {
   if (path.length === 0) {
     return compareTopLevelSections;
+  }
+
+  if (path.length === 1 && path[0] === "Resources") {
+    return compareResourcesByType(object);
   }
 
   if (path.length === 2 && path[0] === "Resources") {

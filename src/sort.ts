@@ -27,7 +27,7 @@ export function sortValue(
 
   if (value !== null && typeof value === "object") {
     const source = value as Record<string, unknown>;
-    const compare = resolveComparator(path);
+    const compare = resolveComparator(path, source);
     const sorted: Record<string, unknown> = {};
     for (const key of Object.keys(source).sort(compare)) {
       sorted[key] = sortValue(source[key], resolveComparator, [...path, key]);
