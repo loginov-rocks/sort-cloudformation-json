@@ -4,6 +4,7 @@ import type { Comparator } from './compare.ts';
 
 import { compareKeys } from './compare.ts';
 import { sortValue } from './sort.ts';
+import { resolveTemplateComparator } from './templateOrder.ts';
 
 /** Reverse of {@link compareKeys}; used to prove the resolver is consulted per object. */
 const reverse: Comparator = (a, b) => (a < b ? 1 : (a > b ? -1 : 0));
@@ -209,6 +210,191 @@ describe('sortValue', () => {
     const sorted = sortValue(value) as { DependsOn: string[] };
 
     expect(sorted.DependsOn).toEqual(['Web', 'App', 'Db']);
+  });
+
+  it('orders an IAM policy document and its statement keys, statement array order kept', () => {
+    /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
+    const value = {
+      Resources: {
+        Policy: {
+          Type: 'AWS::S3::BucketPolicy',
+          Properties: {
+            PolicyDocument: {
+              Statement: [
+                {
+                  Resource: '*',
+                  Effect: 'Allow',
+                  Action: 's3:GetObject',
+                  Sid: 'Second',
+                  Principal: { AWS: '*' },
+                },
+                { Effect: 'Deny', Sid: 'First' },
+              ],
+              Version: '2012-10-17',
+            },
+          },
+        },
+      },
+    };
+    /* eslint-enable perfectionist/sort-objects */
+
+    const policyDocument = (
+      sortValue(value, resolveTemplateComparator) as {
+        Resources: {
+          Policy: { Properties: { PolicyDocument: { Statement: Record<string, unknown>[] } } };
+        };
+      }
+    ).Resources.Policy.Properties.PolicyDocument;
+
+    // Document keys: Version before Statement.
+    expect(Object.keys(policyDocument)).toEqual(['Version', 'Statement']);
+    // Statement array order is preserved (the original 'Second' then 'First')...
+    expect(policyDocument.Statement.map(statement => statement.Sid)).toEqual(['Second', 'First']);
+    // ...but each statement's own keys follow the statement order.
+    expect(Object.keys(policyDocument.Statement[0])).toEqual([
+      'Sid',
+      'Effect',
+      'Principal',
+      'Action',
+      'Resource',
+    ]);
+  });
+
+  it('orders a single (non-array) Statement object inside a policy document', () => {
+    /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
+    const value = {
+      Resources: {
+        Role: {
+          Type: 'AWS::IAM::Role',
+          Properties: {
+            AssumeRolePolicyDocument: {
+              Statement: { Action: 'sts:AssumeRole', Effect: 'Allow', Principal: { Service: 'x' } },
+              Version: '2012-10-17',
+            },
+          },
+        },
+      },
+    };
+    /* eslint-enable perfectionist/sort-objects */
+
+    const statement = (
+      sortValue(value, resolveTemplateComparator) as {
+        Resources: {
+          Role: { Properties: { AssumeRolePolicyDocument: { Statement: Record<string, unknown> } } };
+        };
+      }
+    ).Resources.Role.Properties.AssumeRolePolicyDocument.Statement;
+
+    expect(Object.keys(statement)).toEqual(['Effect', 'Principal', 'Action']);
+  });
+
+  it('orders every inline Policies[*].PolicyDocument and its statements', () => {
+    /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
+    const value = {
+      Resources: {
+        Role: {
+          Type: 'AWS::IAM::Role',
+          Properties: {
+            Policies: [
+              {
+                PolicyDocument: {
+                  Statement: [{ Resource: '*', Effect: 'Allow', Action: 's3:*' }],
+                  Version: '2012-10-17',
+                },
+                PolicyName: 'inline',
+              },
+            ],
+          },
+        },
+      },
+    };
+    /* eslint-enable perfectionist/sort-objects */
+
+    const policyDocument = (
+      sortValue(value, resolveTemplateComparator) as {
+        Resources: {
+          Role: {
+            Properties: {
+              Policies: { PolicyDocument: { Statement: Record<string, unknown>[] } }[];
+            };
+          };
+        };
+      }
+    ).Resources.Role.Properties.Policies[0].PolicyDocument;
+
+    // The array element's PolicyDocument is in scope: Version before Statement,
+    // and each statement's keys follow the statement order.
+    expect(Object.keys(policyDocument)).toEqual(['Version', 'Statement']);
+    expect(Object.keys(policyDocument.Statement[0])).toEqual(['Effect', 'Action', 'Resource']);
+  });
+
+  it('leaves an intrinsic-function policy document alone (the safety guard)', () => {
+    /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
+    const value = {
+      Resources: {
+        Cond: {
+          Type: 'AWS::IAM::Role',
+          Properties: {
+            AssumeRolePolicyDocument: {
+              'Fn::If': ['UseA', { Version: 'a', Statement: [] }, { Version: 'b', Statement: [] }],
+            },
+          },
+        },
+      },
+    };
+    /* eslint-enable perfectionist/sort-objects */
+
+    const document = (
+      sortValue(value, resolveTemplateComparator) as {
+        Resources: {
+          Cond: { Properties: { AssumeRolePolicyDocument: { 'Fn::If': [string, ...object[]] } } };
+        };
+      }
+    ).Resources.Cond.Properties.AssumeRolePolicyDocument;
+
+    // The Fn::If object is not treated as a document; the branch documents it
+    // selects between are off any curated path, so they stay alphabetical
+    // (Statement before Version), proving no policy ordering was applied.
+    expect(Object.keys(document)).toEqual(['Fn::If']);
+    expect(Object.keys(document['Fn::If'][1])).toEqual(['Statement', 'Version']);
+  });
+
+  it('is robust when a policy document is not an object or a statement is not an object', () => {
+    /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
+    const value = {
+      Resources: {
+        Weird: {
+          Type: 'AWS::S3::BucketPolicy',
+          Properties: {
+            // Not an object: left untouched.
+            PolicyDocument: 'see-attached',
+          },
+        },
+        Mixed: {
+          Type: 'AWS::IAM::Role',
+          Properties: {
+            AssumeRolePolicyDocument: {
+              // A non-object statement entry must pass through unchanged.
+              Statement: ['*', { Effect: 'Allow', Action: 'sts:AssumeRole' }],
+              Version: '2012-10-17',
+            },
+          },
+        },
+      },
+    };
+    /* eslint-enable perfectionist/sort-objects */
+
+    const result = sortValue(value, resolveTemplateComparator) as {
+      Resources: {
+        Mixed: { Properties: { AssumeRolePolicyDocument: { Statement: unknown[] } } };
+        Weird: { Properties: { PolicyDocument: unknown } };
+      };
+    };
+
+    expect(result.Resources.Weird.Properties.PolicyDocument).toBe('see-attached');
+    const { Statement } = result.Resources.Mixed.Properties.AssumeRolePolicyDocument;
+    expect(Statement[0]).toBe('*');
+    expect(Object.keys(Statement[1] as object)).toEqual(['Effect', 'Action']);
   });
 
   it('does not mutate the input value', () => {

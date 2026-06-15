@@ -3,6 +3,7 @@ import type { Comparator } from './compare.ts';
 import { compareKeys } from './compare.ts';
 import { compareOutputEntry } from './outputs.ts';
 import { compareParameterEntry } from './parameters.ts';
+import { resolvePolicyComparator } from './policy.ts';
 import { compareResourceAttributes, compareResourcesByType } from './resources.ts';
 import { compareTopLevelSections } from './sections.ts';
 
@@ -20,6 +21,9 @@ import { compareTopLevelSections } from './sections.ts';
  *   fixed output entry order.
  * - A direct child of the root `Parameters` section (`["Parameters", <name>]`):
  *   the fixed parameter entry order.
+ * - One of the curated IAM policy-document positions under a resource's
+ *   `Properties` (see {@link resolvePolicyComparator}): the fixed policy document
+ *   order, and within its `Statement`(s) the fixed policy statement order.
  * - Everywhere else: plain alphabetical order.
  *
  * The position is matched strictly by path, so a `Type` or `Properties` key that
@@ -47,6 +51,11 @@ export function resolveTemplateComparator(
 
   if (path.length === 2 && path[0] === 'Parameters') {
     return compareParameterEntry;
+  }
+
+  const policyComparator = resolvePolicyComparator(path, object);
+  if (policyComparator !== undefined) {
+    return policyComparator;
   }
 
   return compareKeys;

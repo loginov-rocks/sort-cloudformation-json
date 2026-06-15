@@ -3,6 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 import { compareKeys } from './compare.ts';
 import { compareOutputEntry } from './outputs.ts';
 import { compareParameterEntry } from './parameters.ts';
+import { comparePolicyDocument, comparePolicyStatement } from './policy.ts';
 import { compareResourceAttributes } from './resources.ts';
 import { compareTopLevelSections } from './sections.ts';
 import { resolveTemplateComparator } from './templateOrder.ts';
@@ -54,6 +55,34 @@ describe('resolveTemplateComparator', () => {
   it('sorts a deeper key that merely equals \'Resources\' alphabetically', () => {
     expect(
       resolveTemplateComparator(['Resources', 'MyRes', 'Properties', 'Resources'], {}),
+    ).toBe(compareKeys);
+  });
+
+  it('uses the policy document order at the curated policy-document paths', () => {
+    expect(
+      resolveTemplateComparator(['Resources', 'Policy', 'Properties', 'PolicyDocument'], {}),
+    ).toBe(comparePolicyDocument);
+    expect(
+      resolveTemplateComparator(['Resources', 'Role', 'Properties', 'AssumeRolePolicyDocument'], {}),
+    ).toBe(comparePolicyDocument);
+    // Inline policies: every Policies[*].PolicyDocument is in scope.
+    expect(
+      resolveTemplateComparator(['Resources', 'Role', 'Properties', 'Policies', 'PolicyDocument'], {}),
+    ).toBe(comparePolicyDocument);
+  });
+
+  it('uses the policy statement order for a Statement inside a policy document', () => {
+    expect(
+      resolveTemplateComparator(
+        ['Resources', 'Policy', 'Properties', 'PolicyDocument', 'Statement'],
+        {},
+      ),
+    ).toBe(comparePolicyStatement);
+  });
+
+  it('sorts a policy-document key found off a curated path alphabetically', () => {
+    expect(
+      resolveTemplateComparator(['Resources', 'R', 'Properties', 'Other', 'PolicyDocument'], {}),
     ).toBe(compareKeys);
   });
 });

@@ -110,3 +110,29 @@ Requirements:
 - Apply this only when the value is safely recognizable - an array whose elements are all strings. If `DependsOn` is a single string (also valid), there is nothing to sort. If the value is an array containing any non-string element, leave its order untouched and fall back to the normal array handling. Never drop or alter elements; this rule only changes their order.
 - Like Tags, this is scoped by structural position, and is one of only two places array order is changed. The global "never reorder arrays" behavior remains in force everywhere else.
 - Implement it as an explicit, clearly-named special case, consistent with the Tags exception, so the carve-out is obvious to a future reader.
+
+## Rule 8: Policy field order - key order inside policy documents and their statements
+
+Within an IAM-style policy document, the keys of the document and of each statement follow a defined conventional order - not alphabetical. Policy documents are located by an explicit, curated list of concrete paths, not by shape and not by a recursive search for a key name.
+
+Document key order: `Version`, `Id`, `Statement`.
+
+Statement key order: `Sid`, `Effect`, `Principal`, `NotPrincipal`, `Action`, `NotAction`, `Resource`, `NotResource`, `Condition`.
+
+Requirements:
+
+- Define three things programmatically as named constants in the source: the document key order, the statement key order, and the list of concrete policy-document paths. Keep the path list in one place so it is easy to read and extend; note in a brief comment that it is a deliberately curated set of safe bets, not an exhaustive catalogue.
+- The rule applies only at these exact paths, each rooted at a resource's `Properties` (i.e. under `Resources.<logicalID>.Properties`):
+  - `PolicyDocument` - covers `AWS::IAM::Policy`, `AWS::IAM::ManagedPolicy`, `AWS::IAM::RolePolicy` / `UserPolicy` / `GroupPolicy`, `AWS::S3::BucketPolicy`, `AWS::SQS::QueuePolicy`, `AWS::SNS::TopicPolicy`, `AWS::Logs::ResourcePolicy`, and the like.
+  - `AssumeRolePolicyDocument` - the `AWS::IAM::Role` trust policy.
+  - `KeyPolicy` - the `AWS::KMS::Key` (and `AWS::KMS::ReplicaKey`) policy.
+  - `RepositoryPolicyText` - the `AWS::ECR::Repository` policy.
+  - `Policies[*].PolicyDocument` - inline policies on `AWS::IAM::Role` / `AWS::IAM::User` / `AWS::IAM::Group` (the `PolicyDocument` of every element of the `Policies` array).
+- These names are reserved by CloudFormation/IAM convention to hold a policy-document object at these paths, so the path is the binding - no resource `Type` check is needed or performed, consistent with every other rule keying off structural position rather than `Type`.
+- It is position-aware like Rules 2–7, and path matching is exact - never a recursive subtree walk. A matching key name found anywhere other than these listed paths (deeper inside another property, or under `Metadata`, `Parameters`, `Outputs`, or top level) is left to the normal handling and never reordered. The path grammar supports a fixed `[*]` array segment meaning "every element" (as in `Policies[*].PolicyDocument`); it supports no open-ended wildcards.
+- Order the policy document's own keys as `Version`, `Id`, `Statement`, then any remaining keys alphabetically.
+- `Statement` may be a single statement object or an array of statement objects (both valid). Order the keys of each statement object using the statement key order, then any remaining keys alphabetically. Do not reorder the entries of the `Statement` array itself - element order is preserved, consistent with the baseline; only the keys within each statement are ordered.
+- Any key on a statement or on the document that is not in the defined list must be preserved and placed after the defined keys, sorted alphabetically among themselves. Nothing is ever dropped.
+- Be robust: at any bound path, do nothing and fall back to the normal handling - never error, never drop - when the value is not a plain object (e.g. `RepositoryPolicyText`, or `AWS::Logs::ResourcePolicy`'s `PolicyDocument`, supplied as a JSON string), when the value is an intrinsic-function object (a single `Fn::*` or `Ref` key, such as `Fn::Sub` / `Fn::If`) rather than a literal document, when `Statement` is absent, or when a statement entry is not an object. This guard is what keeps the path-only binding safe.
+- Everything nested inside a statement (e.g. the `Condition` block, `Principal` maps, `Action` / `Resource` arrays) continues to use the existing handling - arrays preserve order, nested objects sort alphabetically.
+- Reserved policy names that are ambiguous across services (e.g. `ResourcePolicy`) are deliberately left out as not a safe bet; the path list is the single place to add more once their shape and position are certain.
