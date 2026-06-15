@@ -1,6 +1,6 @@
 {
   "name": "sort-cloudformation-json",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Zero-config CLI that recursively sorts the keys of a CloudFormation JSON template in place",
   "keywords": [
     "cloudformation",

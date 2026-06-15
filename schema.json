@@ -1,0 +1,196 @@
+{
+  "order": [
+    "AWSTemplateFormatVersion",
+    "Description",
+    "Metadata",
+    "Parameters",
+    "Rules",
+    "Mappings",
+    "Conditions",
+    "Transform",
+    "Resources",
+    "Outputs"
+  ],
+  "items": {
+    "Parameters": {
+      "elements": {
+        "order": [
+          "Type",
+          "Description",
+          "Default",
+          "AllowedValues",
+          "AllowedPattern",
+          "ConstraintDescription",
+          "MinLength",
+          "MaxLength",
+          "MinValue",
+          "MaxValue",
+          "NoEcho"
+        ]
+      }
+    },
+    "Outputs": {
+      "elements": {
+        "order": [
+          "Description",
+          "Value",
+          "Export"
+        ]
+      }
+    },
+    "Resources": {
+      "sortByField": "Type",
+      "elements": {
+        "order": [
+          "Type",
+          "Condition",
+          "DependsOn",
+          "Properties",
+          "CreationPolicy",
+          "UpdatePolicy",
+          "UpdateReplacePolicy",
+          "DeletionPolicy",
+          "Metadata"
+        ],
+        "items": {
+          "DependsOn": {
+            "sortByValue": true
+          },
+          "Properties": {
+            "items": {
+              "Tags": {
+                "sortByField": "Key"
+              },
+              "PolicyDocument": {
+                "order": [
+                  "Version",
+                  "Id",
+                  "Statement"
+                ],
+                "items": {
+                  "Statement": {
+                    "elements": {
+                      "order": [
+                        "Sid",
+                        "Effect",
+                        "Principal",
+                        "NotPrincipal",
+                        "Action",
+                        "NotAction",
+                        "Resource",
+                        "NotResource",
+                        "Condition"
+                      ]
+                    }
+                  }
+                }
+              },
+              "AssumeRolePolicyDocument": {
+                "order": [
+                  "Version",
+                  "Id",
+                  "Statement"
+                ],
+                "items": {
+                  "Statement": {
+                    "elements": {
+                      "order": [
+                        "Sid",
+                        "Effect",
+                        "Principal",
+                        "NotPrincipal",
+                        "Action",
+                        "NotAction",
+                        "Resource",
+                        "NotResource",
+                        "Condition"
+                      ]
+                    }
+                  }
+                }
+              },
+              "KeyPolicy": {
+                "order": [
+                  "Version",
+                  "Id",
+                  "Statement"
+                ],
+                "items": {
+                  "Statement": {
+                    "elements": {
+                      "order": [
+                        "Sid",
+                        "Effect",
+                        "Principal",
+                        "NotPrincipal",
+                        "Action",
+                        "NotAction",
+                        "Resource",
+                        "NotResource",
+                        "Condition"
+                      ]
+                    }
+                  }
+                }
+              },
+              "RepositoryPolicyText": {
+                "order": [
+                  "Version",
+                  "Id",
+                  "Statement"
+                ],
+                "items": {
+                  "Statement": {
+                    "elements": {
+                      "order": [
+                        "Sid",
+                        "Effect",
+                        "Principal",
+                        "NotPrincipal",
+                        "Action",
+                        "NotAction",
+                        "Resource",
+                        "NotResource",
+                        "Condition"
+                      ]
+                    }
+                  }
+                }
+              },
+              "Policies": {
+                "elements": {
+                  "items": {
+                    "PolicyDocument": {
+                      "order": [
+                        "Version",
+                        "Id",
+                        "Statement"
+                      ],
+                      "items": {
+                        "Statement": {
+                          "elements": {
+                            "order": [
+                              "Sid",
+                              "Effect",
+                              "Principal",
+                              "NotPrincipal",
+                              "Action",
+                              "NotAction",
+                              "Resource",
+                              "NotResource",
+                              "Condition"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
