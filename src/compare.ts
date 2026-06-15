@@ -17,15 +17,34 @@ export type ComparatorResolver = (
 /**
  * Comparator used to order object keys.
  *
- * Compares by UTF-16 code unit so the result is deterministic and identical on
- * every machine, independent of locale. This deliberately avoids
- * `String.prototype.localeCompare` and `Intl.Collator`, whose ordering can vary
- * by environment.
+ * Compares case-insensitively first, so keys read in dictionary order regardless
+ * of capitalization — e.g. `AWS::SecretsManager::Secret` sorts before
+ * `AWS::SQS::Queue`, rather than every uppercase letter sorting ahead of every
+ * lowercase one. Keys that are equal ignoring case (e.g. `Type` and `type`) fall
+ * back to a UTF-16 code-unit comparison, which keeps the ordering a deterministic
+ * total order.
+ *
+ * Case folding uses `String.prototype.toLowerCase` (a fixed Unicode mapping) and
+ * the final comparison uses the `<`/`>` operators, so the result is identical on
+ * every machine. This deliberately avoids `localeCompare`, `toLocaleLowerCase`,
+ * and `Intl.Collator`, whose ordering can vary by environment.
  *
  * Isolated here so the ordering rule can be swapped out later without touching
  * the traversal logic.
  */
 export function compareKeys(a: string, b: string): number {
+  const lowerA = a.toLowerCase();
+  const lowerB = b.toLowerCase();
+
+  if (lowerA < lowerB) {
+    return -1;
+  }
+  if (lowerA > lowerB) {
+    return 1;
+  }
+
+  // Equal ignoring case: break the tie by raw code unit so the order stays a
+  // deterministic total order (e.g. `Type` consistently before `type`).
   if (a < b) {
     return -1;
   }

@@ -6,6 +6,8 @@ This document defines how CloudFormation JSON templates are sorted. The goal is 
 
 The default is deliberately simple: object keys are sorted alphabetically, recursively, all the way down. Most of a template reads perfectly well this way, and a deterministic alphabetical sort is the baseline everything else builds on.
 
+This ordering must be **case-insensitive** and applies everywhere a rule below says "alphabetically": capitalization must not affect placement, so `AWS::SecretsManager::Secret` sorts before `AWS::SQS::Queue`, not after. Keys differing only in case (`Type` vs `type`) must still order deterministically, and the comparison must stay locale-independent so `--check` is reproducible on every machine.
+
 The rules that follow are the intentional exceptions to that baseline. CloudFormation itself ignores key order - templates are parsed as JSON, where key order carries no meaning - so these rules exist for human readability, not correctness. Certain parts of a template have an expected reading order that a pure alphabetical sort would scramble: a resource's `Type` before its `Properties`, the top-level sections in their familiar sequence, and similar. Alphabetizing those is technically valid but reads as wrong to anyone familiar with CloudFormation.
 
 The ordering comes from two places. The top-level section order follows the sequence AWS publishes in its template anatomy documentation. The remaining orderings - resource attributes, parameter and output fields, tag and dependency lists - follow established community convention for the cases AWS does not formally specify; where a convention is firm it is treated as fixed, and where it is merely sensible it is called out as an adjustable default.

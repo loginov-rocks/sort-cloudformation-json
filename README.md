@@ -1,5 +1,7 @@
 # sort-cloudformation-json
 
+Inspired by https://github.com/keithamus/sort-package-json and https://github.com/azat-io/eslint-plugin-perfectionist
+
 Zero-config CLI that sorts the keys of a CloudFormation JSON template
 alphabetically and recursively, rewriting the file in place.
 
@@ -47,6 +49,6 @@ npm run build   # compile to dist/ (JavaScript + type declarations) with tsc
 npm run lint    # ESLint
 ```
 
-## License
+## AI
 
-[MIT](LICENSE)
+Written mostly by Claude Opus 4.8 at High effort.

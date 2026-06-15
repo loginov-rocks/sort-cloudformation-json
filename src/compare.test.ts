@@ -15,8 +15,19 @@ describe('compareKeys', () => {
     expect(compareKeys('Resources', 'Resources')).toBe(0);
   });
 
-  it('orders by UTF-16 code unit, so uppercase sorts before lowercase', () => {
-    expect(compareKeys('Bucket', 'access')).toBe(-1);
+  it('compares case-insensitively, so dictionary order ignores capitalization', () => {
+    // 'access' before 'Bucket' (a < b), unlike a raw code-unit sort where every
+    // uppercase letter precedes every lowercase one.
+    expect(compareKeys('Bucket', 'access')).toBe(1);
+    expect(compareKeys('access', 'Bucket')).toBe(-1);
+    // The motivating case: SecretsManager before SQS.
+    expect(compareKeys('AWS::SecretsManager::Secret', 'AWS::SQS::Queue')).toBe(-1);
+  });
+
+  it('breaks a case-only tie by code unit, deterministically', () => {
+    // Equal ignoring case: uppercase sorts before lowercase as the tie-break.
+    expect(compareKeys('Type', 'type')).toBe(-1);
+    expect(compareKeys('type', 'Type')).toBe(1);
   });
 
   it('produces a stable, locale-independent ordering when used with sort()', () => {

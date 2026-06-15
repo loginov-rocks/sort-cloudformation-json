@@ -36,11 +36,6 @@
     "test:coverage": "npm test -- --coverage",
     "typecheck": "tsc --noEmit"
   },
-  "jest": {
-    "collectCoverageFrom": [
-      "<rootDir>/src/**/*.ts"
-    ]
-  },
   "devDependencies": {
     "@babel/core": "^7.29.7",
     "@babel/preset-env": "^7.29.7",

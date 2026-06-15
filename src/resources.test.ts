@@ -88,6 +88,20 @@ describe('compareResourcesByType', () => {
     ]);
   });
 
+  it('groups by Type in case-insensitive order (SecretsManager before SQS)', () => {
+    const resources = {
+      Queue: { Type: 'AWS::SQS::Queue' },
+      Secret: { Type: 'AWS::SecretsManager::Secret' },
+    };
+
+    // 'SecretsManager' < 'SQS' by dictionary order; a raw code-unit sort would
+    // wrongly place 'SQS' first because 'Q' precedes lowercase 'e'.
+    expect(Object.keys(resources).sort(compareResourcesByType(resources))).toEqual([
+      'Secret',
+      'Queue',
+    ]);
+  });
+
   it('breaks ties on identical Type by logical ID', () => {
     /* eslint-disable perfectionist/sort-objects -- intentionally unsorted test fixture */
     const resources = {

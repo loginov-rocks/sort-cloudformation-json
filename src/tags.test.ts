@@ -46,7 +46,7 @@ describe('sortTagsByKey', () => {
     ];
 
     expect(sortTagsByKey(tags)).toEqual([
-      { Key: 'App', Value: 'web' }, // uppercase sorts before lowercase
+      { Key: 'App', Value: 'web' }, // case-insensitive: app < env < owner
       { Key: 'env', Value: 'prod' },
       { Key: 'owner', Value: 'team-a' },
     ]);

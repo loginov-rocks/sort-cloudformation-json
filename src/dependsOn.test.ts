@@ -33,7 +33,7 @@ describe('isDependsOnList', () => {
 describe('sortDependsOn', () => {
   it('sorts logical IDs alphabetically and deterministically', () => {
     expect(sortDependsOn(['Web', 'App', 'Db'])).toEqual(['App', 'Db', 'Web']);
-    // Uppercase sorts before lowercase under the deterministic comparison.
+    // Case-insensitive: 'alpha' < 'beta' regardless of capitalization.
     expect(sortDependsOn(['beta', 'Alpha'])).toEqual(['Alpha', 'beta']);
   });
 
